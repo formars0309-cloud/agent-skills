@@ -42,7 +42,8 @@ const QUANTITY = new RegExp(
 
 /* ---------- what counts as a source ---------- */
 
-const LABEL = /\[\s*(권고|관행|미확인|GUIDE|PRACTICE|UNVERIFIED)/i;
+// Markdown writes the label as [권고 ...]; HTML writes it as a chip element.
+const LABEL = /\[\s*(권고|관행|미확인|GUIDE|PRACTICE|UNVERIFIED)|class\s*=\s*"[^"]*\bsrc\b/i;
 const CITATION = /\b(PMID|PMCID|DOI|doi:)\b|\b10\.\d{4,9}\//i;
 // A society acronym next to a year, e.g. "2022 ACC/AHA", "EACTS/STS 2024".
 const SOCIETY_YEAR = /\b(?:19|20)\d{2}\b[^\n]{0,40}\b[A-Z]{2,}(?:\/[A-Z]{2,})*\b|\b[A-Z]{2,}(?:\/[A-Z]{2,})*\b[^\n]{0,40}\b(?:19|20)\d{2}\b/;
@@ -64,8 +65,10 @@ function namesGuidelineWithoutId(line) {
 
 /* ---------- absolutes without a population ---------- */
 
+// "절대" also means "absolute" (절대 혈압), so only count it when it is doing
+// prohibition work - followed by a negative, or written as 절대로.
 const ABSOLUTE =
-  /(절대|금기|하지\s*마|해서는\s*안\s*(?:된|됩)|\bnever\b|\balways\b|\bcontraindicated\b|\bmust not\b)/i;
+  /(절대로|절대\s*(?:안|못|하지|불가|금지)|금기|하지\s*마|해서는\s*안\s*(?:된|됩)|\bnever\b|\balways\b|\bcontraindicated\b|\bmust not\b)/i;
 const CONDITION =
   /(단,|다만|예외|경우|환자|상황|일 때|시에|~하면|\bexcept\b|\bunless\b|\bif\b|\bwhen\b|\bin patients\b|\bwithout\b)/i;
 
@@ -75,13 +78,22 @@ const CONDITION =
 const SKIP_LINE = /^\s*\|?[\s:|-]+\|?\s*$|^\s*(?:[-*_]\s*){3,}$/;
 
 function isHeading(line) {
-  return /^\s{0,3}#{1,6}\s/.test(line);
+  return /^\s{0,3}#{1,6}\s/.test(line) || /<h[1-6]\b/i.test(line);
+}
+
+// Inline style attributes carry percentages and hex values, not doses.
+function stripStyleAttrs(line) {
+  return line.replace(/\bstyle\s*=\s*"[^"]*"/gi, '');
 }
 
 function scopeLabelFrom(line) {
   const html = line.match(/<!--\s*label:\s*([^>]*?)\s*-->/i);
   if (html) return html[1];
-  if (isHeading(line) && LABEL.test(line)) return line;
+  // A heading carrying a real citation scopes just as well as one carrying a
+  // keyword label - "## Risk [IRAD 2025 · PMID 39999651]" sources the table
+  // under it, and demanding the identifier be repeated in every row would push
+  // toward stripping it out instead.
+  if (isHeading(line) && isSourced(line)) return line;
   return null;
 }
 
@@ -100,6 +112,7 @@ function lintFile(path) {
   const warnings = [];
 
   let inFence = false;
+  let inStyle = false; // <style>/<script> - hex colours and percentages are not doses
   let scope = null; // inherited label, cleared at the next heading
 
   lines.forEach((line, i) => {
@@ -110,6 +123,12 @@ function lintFile(path) {
       return;
     }
     if (inFence) return;
+
+    if (/<\s*(style|script)\b/i.test(line)) inStyle = true;
+    if (inStyle) {
+      if (/<\s*\/\s*(style|script)\s*>/i.test(line)) inStyle = false;
+      return;
+    }
 
     const newScope = scopeLabelFrom(line);
     if (newScope !== null) {
@@ -124,10 +143,18 @@ function lintFile(path) {
 
     if (SKIP_LINE.test(line) || !line.trim()) return;
 
-    const covered = isSourced(line) || (scope !== null && isSourced(scope));
+    // Markdown carries its source on the heading; HTML carries it on the
+    // neighbouring tag. Treat a citation one or two lines away as covering the
+    // claim - otherwise every table cell has to repeat the PMID, and the
+    // pressure is then to delete it rather than repeat it.
+    const near = [lines[i - 2], lines[i - 1], lines[i + 1]]
+      .filter(Boolean)
+      .some((l) => isSourced(l));
+
+    const covered = isSourced(line) || near || (scope !== null && isSourced(scope));
 
     if (!covered) {
-      const hits = [...line.matchAll(QUANTITY)].map((m) => m[0].trim());
+      const hits = [...stripStyleAttrs(line).matchAll(QUANTITY)].map((m) => m[0].trim());
       if (hits.length) {
         errors.push({ n, hits: [...new Set(hits)], line: line.trim() });
       }
