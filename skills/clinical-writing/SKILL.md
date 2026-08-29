@@ -107,14 +107,25 @@ Write "generally avoid in A; reasonable in B", not "avoid".
 
 High-stakes clinical content goes to a second model before it reaches the user:
 
-```bash
-codex exec --skip-git-repo-check -s read-only "You are a senior <specialty>
-physician. Review for: (1) factual errors - quote the line, give the correct
-value; (2) outdated practice; (3) missing current agents; (4) where you are
-uncertain, say so. Do not invent citations.
+Pipe the draft in on stdin. Interpolating it into the argument (`"... $(cat
+draft.md)"`) works until the draft grows, then dies with `Argument list too
+long` — on Windows that ceiling arrives around 20 KB, which a finished document
+reaches easily.
 
---- $(cat draft.md)"
+```bash
+{ cat review-prompt.txt; cat draft.md; } | \
+  codex exec --skip-git-repo-check -s read-only -
 ```
+
+with `review-prompt.txt` holding: *You are a senior &lt;specialty&gt; physician.
+Review for: (1) factual errors — quote the line, give the correct value; (2)
+outdated practice; (3) missing current agents; (4) where you are uncertain, say
+so. Do not invent citations.*
+
+Very long documents also stall as one request. Split by section into pieces of
+roughly 3–6 KB and review each; the findings come back sharper as well, since
+the reviewer is not skimming. Keep one whole-document pass for contradictions
+between sections.
 
 A different training distribution catches different errors. On the dissection
 draft, self-review found 2 of the 14; cross-review found the other 3 of the
