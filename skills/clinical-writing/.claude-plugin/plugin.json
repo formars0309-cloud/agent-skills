@@ -1,0 +1,12 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "clinical-writing",
+  "version": "1.0.0",
+  "description": "Discipline for producing clinical content a clinician will act on: guideline lookup before drafting, a source label on every dose and target, format rules that stop conditions being flattened, and cross-model review before delivery.",
+  "author": {
+    "name": "formars0309-cloud"
+  },
+  "skills": [
+    "./"
+  ]
+}

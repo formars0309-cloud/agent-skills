@@ -9,12 +9,13 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | Skill | What it does |
 |---|---|
 | [`citation-verify`](skills/citation-verify) | Resolves DOIs / PMIDs / PMCIDs against PubMed, Crossref and Europe PMC to catch fabricated, misattributed and retracted citations. |
+| [`clinical-writing`](skills/clinical-writing) | Discipline for clinical content a clinician will act on: guideline lookup before drafting, a source label on every dose and target, and cross-model review before delivery. |
 
 ## Install on another machine
 
 ```bash
 npx --yes skills add https://github.com/formars0309-cloud/agent-skills \
-  --skill citation-verify --global --agent claude-code -y
+  --skill citation-verify --skill clinical-writing --global --agent claude-code -y
 ```
 
 The repo is private, so that machine needs to be authenticated to GitHub first
