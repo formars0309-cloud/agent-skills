@@ -1,0 +1,12 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "citation-verify",
+  "version": "1.0.0",
+  "description": "Verify biomedical citations against PubMed, Crossref and Europe PMC: detects fabricated DOIs/PMIDs, identifiers pointing at the wrong paper, and retracted articles.",
+  "author": {
+    "name": "formars0309-cloud"
+  },
+  "skills": [
+    "./"
+  ]
+}
