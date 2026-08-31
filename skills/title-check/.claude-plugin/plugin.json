@@ -1,0 +1,12 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "title-check",
+  "version": "1.0.0",
+  "description": "Measure article title candidates against the Naver search APIs: which of several synonyms people actually search for, whether the target keyword survives in the title, how closely it resembles existing posts, SERP truncation, and formulaic filler phrases.",
+  "author": {
+    "name": "formars0309-cloud"
+  },
+  "skills": [
+    "./"
+  ]
+}
