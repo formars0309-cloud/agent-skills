@@ -10,12 +10,13 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 |---|---|
 | [`citation-verify`](skills/citation-verify) | Resolves DOIs / PMIDs / PMCIDs against PubMed, Crossref and Europe PMC to catch fabricated, misattributed and retracted citations. |
 | [`clinical-writing`](skills/clinical-writing) | Discipline for clinical content a clinician will act on: guideline lookup before drafting, a source label on every dose and target, and cross-model review before delivery. |
+| [`blueocean`](skills/blueocean) | Finds content topics where search demand is high but nobody has answered well, by measuring Naver monthly search volume against existing blog posts, discounted by how much of the top of the page is advertising. |
 
 ## Install on another machine
 
 ```bash
 npx --yes skills add https://github.com/formars0309-cloud/agent-skills \
-  --skill citation-verify --skill clinical-writing --global --agent claude-code -y
+  --skill citation-verify --skill clinical-writing --skill blueocean --global --agent claude-code -y
 ```
 
 The repo is private, so that machine needs to be authenticated to GitHub first
@@ -40,8 +41,19 @@ to keep in sync. Committing is the backup step, nothing else.
 
 ## Requirements
 
-Node.js 18+ (for the built-in `fetch`). No API keys: PubMed, Crossref and
+Node.js 18+ (for the built-in `fetch`).
+
+`citation-verify` and `clinical-writing` need no API keys — PubMed, Crossref and
 Europe PMC are all queried anonymously.
+
+`blueocean` needs Naver credentials, which are read from `~/.claude/.naver-api.env`
+(or a project-local `.env`, or the environment). **That file lives outside this repo
+and must never be committed to it.** Two sets are required:
+
+| Keys | What for | Where to get them |
+|---|---|---|
+| `NAVER_AD_API_KEY`, `NAVER_AD_SECRET_KEY`, `NAVER_AD_CUSTOMER_ID` | Monthly search volume — the only source for demand | searchad.naver.com → 도구 → API 사용 관리. Free, no payment details |
+| `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | Blog/news document counts and search trend | ncloud.com → NAVER API HUB → register an Application, tick 검색 (블로그·뉴스) and Data Lab |
 
 ## Adding a skill
 
