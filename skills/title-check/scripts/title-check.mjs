@@ -167,6 +167,45 @@ function extractTerms(title) {
   return [...out];
 }
 
+/**
+ * 타깃 키워드가 제목에 얼마나 살아 있는가.
+ *
+ * 통째 일치만 보면 오탐이 난다. 타깃이 '요양병원비용'이고 제목이
+ * '요양병원 한 달 비용'이면 붙어 있지 않다는 이유로 '없음'이 되는데,
+ * 검색엔진은 이걸 못 찾지 않는다. 반대로 '욕창단계'인데 제목에 '욕창'만
+ * 있는 것은 진짜 결손이다. 둘을 구분해야 한다.
+ *
+ * 그래서 글자 단위 덮임률을 낸다. 키워드에서 길이 2 이상인 조각을 욕심껏 떼어
+ * 제목에 있는지 보고, 덮인 글자 비율과 통째로 붙어 있는지를 함께 돌려준다.
+ */
+function keywordCoverage(query, title) {
+  const q = squash(query);
+  const t = squash(title);
+  if (!q) return null;
+  if (t.includes(q)) return { covered: 1, contiguous: true, missing: [] };
+
+  const hit = new Array(q.length).fill(false);
+  // 긴 조각부터 욕심껏 맞춘다. 짧은 조각이 먼저 먹으면 덮임률이 과대평가된다.
+  for (let len = q.length; len >= 2; len--) {
+    for (let i = 0; i + len <= q.length; i++) {
+      if (hit.slice(i, i + len).every(Boolean)) continue;
+      if (t.includes(q.slice(i, i + len))) for (let k = i; k < i + len; k++) hit[k] = true;
+    }
+  }
+  const missing = [];
+  let run = '';
+  for (let i = 0; i < q.length; i++) {
+    if (hit[i]) { if (run) { missing.push(run); run = ''; } }
+    else run += q[i];
+  }
+  if (run) missing.push(run);
+  return {
+    covered: Math.round((hit.filter(Boolean).length / q.length) * 100) / 100,
+    contiguous: false,
+    missing: missing.filter((m) => m.length >= 1),
+  };
+}
+
 /** 글자 2-gram. 복합어가 조금 달라도 유사도가 잡힌다. */
 function bigrams(s) {
   const t = s.replace(/[^가-힣a-zA-Z0-9]/g, '');
@@ -246,12 +285,13 @@ async function readFrontmatter(path) {
 /* -------------------------------------------------------------- main */
 
 function parseArgs(argv) {
-  const o = { titles: [], keyword: null, file: null, compare: [], rivals: true, json: false };
+  const o = { titles: [], keyword: null, file: null, backlog: null, compare: [], rivals: true, json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--title') o.titles.push(argv[++i]);
     else if (a === '--keyword') o.keyword = argv[++i];
     else if (a === '--file') o.file = argv[++i];
+    else if (a === '--backlog') o.backlog = argv[++i];
     else if (a === '--compare') o.compare = (argv[++i] ?? '').split(/[,:]/).map((s) => s.trim()).filter(Boolean);
     else if (a === '--no-rivals') o.rivals = false;
     else if (a === '--json') o.json = true;
@@ -259,9 +299,136 @@ function parseArgs(argv) {
   return o;
 }
 
+/* ---------------------------------------------------- 백로그 일괄 모드 */
+
+/**
+ * 백로그 전체를 한 번에 훑는다.
+ *
+ * 한 편씩 도는 것과 다른 점은 호출 수다. 항목마다 따로 조회하면 25편에 수십 번이지만,
+ * 모든 항목의 표현을 한 번에 모아 5개씩 끊으면 훨씬 적다. 그래서 별도 경로다.
+ *
+ * 경쟁 제목은 조회하지 않는다. 항목당 1회씩 더 필요하고, 넓은 키워드에서는 결과가
+ * 믿을 수 없기 때문이다. 문제 항목을 추린 뒤 그것만 개별 모드로 다시 보는 편이 낫다.
+ */
+async function runBacklog(path) {
+  const raw = JSON.parse(await readFile(path, 'utf8'));
+  const items = Array.isArray(raw) ? raw : raw.items ?? raw.backlog ?? [];
+  if (!items.length) {
+    console.error(`${path} 에서 백로그 항목을 찾지 못했습니다.`);
+    process.exit(1);
+  }
+
+  // 잴 표현을 전부 모은다. 타깃 키워드 + 제목에서 뽑은 어휘.
+  const terms = new Set();
+  for (const it of items) {
+    if (it.query) terms.add(it.query);
+    for (const t of extractTerms(it.title ?? '')) terms.add(t);
+  }
+  process.stderr.write(`${items.length}편 · 표현 ${terms.size}개 조회 중\n`);
+  const vol = await measureTerms([...terms]);
+  const v = (t) => vol.get(squash(t)) ?? 0;
+
+  return items.map((it) => {
+    const title = it.title ?? '';
+    const q = it.query ?? '';
+    const cov = q ? keywordCoverage(q, title) : null;
+
+    // 조사가 붙은 형태는 원형에 수요가 있으면 죽은 말이 아니다.
+    // '욕창은' 0 / '욕창' 14,890 인데 '욕창은'을 무수요로 보고하면 잡음이다.
+    const chunkTerms = extractTerms(title);
+    const alive = new Set(chunkTerms.filter((t) => v(t) >= 20));
+    const deadTerms = chunkTerms.filter((t) => {
+      if (v(t) >= 20) return false;
+      // 이 말이 살아 있는 다른 표현의 변형이면 뺀다
+      for (const a of alive) if (t.startsWith(a) || a.startsWith(t)) return false;
+      return true;
+    });
+
+    return {
+      priority: it.priority,
+      id: it.id,
+      query: q,
+      queryVolume: v(q),
+      title,
+      width: estimateWidth(title),
+      chars: [...title].length,
+      coverage: cov,
+      cliches: findCliches(title),
+      // 제목 어휘 중 아무도 안 치는 말. 제목의 무게가 여기 실려 있으면 손해다.
+      deadTerms,
+    };
+  });
+}
+
+/** 문제가 있는 항목이 위로 오게 정렬해서 보여준다. 통과한 것은 훑고 지나가면 된다. */
+function printBacklog(rows) {
+  const n = (x) => Number(x ?? 0).toLocaleString();
+  // 덮임률이 낮을수록 심각하다. 통째로 붙어 있지 않은 것만으로는 문제 삼지 않는다 —
+  // 검색엔진은 '요양병원 한 달 비용'에서 '요양병원비용'을 못 찾지 않는다.
+  const severity = (r) => {
+    const c = r.coverage ? r.coverage.covered : 1;
+    return (c < 0.5 ? 4 : c < 1 ? 2 : 0) + (r.cliches.length ? 3 : 0) + (r.width > 34 ? 1 : 0);
+  };
+
+  const bad = rows.filter((r) => severity(r) > 0).sort((a, b) => severity(b) - severity(a));
+  const ok = rows.filter((r) => severity(r) === 0);
+
+  console.log('');
+  console.log('■ 손봐야 할 항목');
+  console.log('─'.repeat(84));
+  if (!bad.length) console.log('  없음.');
+  for (const r of bad) {
+    console.log(`\n  p${String(r.priority ?? '?').padStart(2)}  ${r.title}`);
+    console.log(`       타깃 ${r.query} (월 ${n(r.queryVolume)}회) · ${r.chars}자 · 폭 ${r.width}em`);
+    if (r.coverage && r.coverage.covered < 1) {
+      const pct = Math.round(r.coverage.covered * 100);
+      console.log(
+        r.coverage.covered < 0.5
+          ? `       [키워드] ${pct}%만 들어 있음. 빠진 것: ${r.coverage.missing.join(', ')}`
+          : `       [키워드] ${pct}% — 빠진 것: ${r.coverage.missing.join(', ')}`
+      );
+    }
+    if (r.cliches.length) console.log(`       [상투어] ${r.cliches.join(', ')}`);
+    if (r.width > 34) console.log('       [길이] 구글·네이버에서 잘립니다');
+    if (r.deadTerms.length) console.log(`       [무수요 표현] ${r.deadTerms.slice(0, 6).join(', ')}`);
+  }
+
+  console.log('\n');
+  console.log('■ 통과');
+  console.log('─'.repeat(84));
+  console.log('  수요'.padEnd(11) + '폭'.padStart(6) + '  타깃 / 제목');
+  for (const r of ok.sort((a, b) => b.queryVolume - a.queryVolume)) {
+    console.log(
+      '  ' + n(r.queryVolume).padStart(8) + String(r.width).padStart(7) + '  ' +
+      (r.query || '-').slice(0, 16).padEnd(18) + r.title.slice(0, 40)
+    );
+  }
+
+  console.log('\n' + '─'.repeat(84));
+  console.log(`총 ${rows.length}편 · 손봐야 할 것 ${bad.length}편 · 통과 ${ok.length}편`);
+  console.log('경쟁 제목은 조회하지 않았습니다. 문제 항목만 개별 모드로 다시 보세요.');
+  console.log('클릭률과 검색 순위는 재지 못합니다. 이 숫자로 순위를 예측하지 마세요.');
+}
+
 async function main() {
   await loadEnv();
   const opt = parseArgs(process.argv.slice(2));
+
+  if (opt.backlog) {
+    for (const k of ['NAVER_AD_API_KEY', 'NAVER_AD_SECRET_KEY', 'NAVER_AD_CUSTOMER_ID']) {
+      if (!process.env[k]) {
+        console.error(`\n${k} 가 없습니다. ~/.claude/.naver-api.env 또는 ./.env 에 넣으세요.\n`);
+        process.exit(1);
+      }
+    }
+    const rows = await runBacklog(opt.backlog);
+    if (opt.json) {
+      console.log(JSON.stringify({ backlog: opt.backlog, rows }, null, 2));
+      return;
+    }
+    printBacklog(rows);
+    return;
+  }
 
   if (opt.file) {
     const fm = await readFrontmatter(opt.file);
