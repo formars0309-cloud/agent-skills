@@ -1,0 +1,12 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "title-draft",
+  "version": "1.0.0",
+  "description": "Find blue-ocean content topics by measuring demand, supply, commercial saturation and trend against the Naver search APIs: monthly search volume vs. existing blog posts, with an ad-ratio discount and year-over-year seasonality.",
+  "author": {
+    "name": "formars0309-cloud"
+  },
+  "skills": [
+    "./"
+  ]
+}
