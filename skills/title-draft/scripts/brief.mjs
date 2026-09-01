@@ -46,13 +46,23 @@ const CLICHE = [
   '충격', '경악', '이것만 알면', '단 하나',
 ];
 
+/** 근거에서 DOI·PMID 를 찾는다. 있으면 citation-verify 로 실조회할 수 있다. */
+function extractIds(basis) {
+  if (!basis) return { doi: null, pmid: null };
+  const doi = (basis.match(/10\.\d{4,9}\/[^\s"'<>,]+/) || [null])[0];
+  const pmid = (basis.match(/PMID[:\s]*(\d{6,9})/i) || [null, null])[1]
+            || (basis.match(/(\d{8})/) || [null, null])[1];
+  return { doi, pmid: pmid || null };
+}
+
 function parseArgs(argv) {
-  const out = { in: 'blueocean.json', keyword: null, myth: null, top: 0, json: false };
+  const out = { in: 'blueocean.json', keyword: null, myth: null, basis: null, top: 0, json: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--in') out.in = argv[++i];
     else if (a === '--keyword') out.keyword = argv[++i];
     else if (a === '--myth') out.myth = argv[++i];
+    else if (a === '--basis') out.basis = argv[++i];
     else if (a === '--top') out.top = Number(argv[++i]) || 0;
     else if (a === '--json') out.json = true;
     else if (a === '--help' || a === '-h') { usage(); process.exit(0); }
@@ -67,7 +77,8 @@ function usage() {
   --in <path>       blueocean 결과 JSON (기본 blueocean.json)
   --keyword <k>     대상 키워드
   --top <n>         상위 n개 키워드를 한 번에 (--keyword 대신)
-  --myth <문장>     반박할 통념. 주면 반전형이 열린다. 없으면 반전형은 내지 않는다
+  --myth <문장>     반박할 통념
+  --basis <근거>    그 통념을 반박하는 근거. --myth 와 함께 줘야 반전형이 열린다
   --json            JSON 출력
 `);
 }
@@ -76,7 +87,7 @@ function usage() {
  * 어떤 유형을 낼 수 있는가.
  * 낼 수 없는 유형은 목록에서 빼고, 왜 뺐는지 남긴다.
  */
-function applicableTypes(row, myth) {
+function applicableTypes(row, myth, basis) {
   const types = [];
 
   // 질문형 — 검색어 자체가 질문의 대상이므로 언제나 가능하다.
@@ -96,13 +107,21 @@ function applicableTypes(row, myth) {
     guide: '누가, 언제 읽어야 하는지를 제목 안에 넣는다. 예: 퇴원 전, 보호자, 수술 다음 날.',
   });
 
-  // 반전형 — 반박할 통념이 명시적으로 주어졌을 때만.
+  // 반전형 — 통념과 그 반박 근거가 둘 다 있을 때만.
+  //
+  // 통념만 받으면 반박의 내용은 여전히 에이전트가 지어내게 된다. 통념이 사실이어도
+  // "그런데 실제로는 …" 뒤가 근거 없이 채워지면 결과는 같다. 그래서 근거를 함께 받는다.
+  let why = null;
+  if (!myth) why = '반박할 통념(--myth)이 없다. 없는 통념을 지어내면 안 되므로 내지 않는다';
+  else if (!basis) why = '통념은 있으나 반박 근거(--basis)가 없다. 근거 없는 반박은 지어낸 반박이다';
   types.push({
     name: '반전형',
-    can: Boolean(myth),
-    why: myth ? null : '반박할 통념(--myth)이 없다. 없는 통념을 지어내면 안 되므로 내지 않는다',
-    guide: myth
-      ? `통념: "${myth}" — 이것을 뒤집되 결과를 약속하지 않는다. 과정이나 조건을 뒤집는다.`
+    can: Boolean(myth && basis),
+    why,
+    guide: myth && basis
+      ? `통념: "${myth}"
+             근거: "${basis}"
+             근거가 실제로 말하는 범위 안에서만 뒤집는다. 결과가 아니라 과정·조건을 뒤집는다.`
       : null,
   });
 
@@ -128,7 +147,7 @@ function cautions(row) {
   return out;
 }
 
-function renderText(row, types, notes, myth) {
+function renderText(row, types, notes, myth, basis) {
   const L = [];
   L.push(`제목 생성 브리프 — ${row.keyword}`);
   L.push('='.repeat(60));
@@ -173,12 +192,25 @@ function renderText(row, types, notes, myth) {
   L.push('');
 
   L.push('## 다음 단계');
-  L.push('  1. 위 유형별로 후보를 하나씩 쓴다. 낼 수 없는 유형은 비워 둔다');
-  L.push('  2. title-check 로 잰다:');
+  let step = 1;
+  if (basis) {
+    const { doi, pmid } = extractIds(basis);
+    if (doi || pmid) {
+      L.push(`  ${step++}. 근거의 출처를 실조회한다 — 이 도구는 근거의 참을 판정하지 않는다:`);
+      const flag = doi ? `--doi ${doi}` : `--pmid ${pmid}`;
+      L.push(`     node ~/.claude/skills/citation-verify/scripts/verify.mjs verify ${flag}`);
+      L.push('     NOT_FOUND · MISMATCH · RETRACTED 가 나오면 반전형을 쓰지 않는다');
+    } else {
+      L.push(`  ${step++}. 근거에 DOI·PMID 가 없다. 공식 고시·학회 지침이면 원문을 직접 열어`);
+      L.push('     그 문서가 실제로 이 반박을 지지하는지 확인한다. 확인 전에는 반전형을 쓰지 않는다');
+    }
+  }
+  L.push(`  ${step++}. 위 유형별로 후보를 하나씩 쓴다. 낼 수 없는 유형은 비워 둔다`);
+  L.push(`  ${step++}. title-check 로 잰다:`);
   L.push(`     node ~/.claude/skills/title-check/scripts/title-check.mjs \\`);
   L.push(`       --keyword ${row.keyword} --title "후보1" --title "후보2"`);
-  L.push('  3. 측정값은 항목별 진단이다. 합산해서 우열을 만들지 않는다');
-  L.push('  4. 최종 선택은 사람이 한다. 의료 콘텐츠는 발행 전 의료인 검토를 거친다');
+  L.push(`  ${step++}. 측정값은 항목별 진단이다. 합산해서 우열을 만들지 않는다`);
+  L.push(`  ${step++}. 최종 선택은 사람이 한다. 의료 콘텐츠는 발행 전 의료인 검토를 거친다`);
 
   return L.join('\n');
 }
@@ -220,7 +252,8 @@ async function main() {
   const briefs = targets.map((row) => {
     // --myth 는 한 키워드를 겨냥한 것이므로 --top 다건에는 적용하지 않는다.
     const myth = targets.length === 1 ? opt.myth : null;
-    return { row, types: applicableTypes(row, myth), notes: cautions(row), myth };
+    const basis = targets.length === 1 ? opt.basis : null;
+    return { row, types: applicableTypes(row, myth, basis), notes: cautions(row), myth, basis };
   });
 
   if (opt.json) {
@@ -240,13 +273,16 @@ async function main() {
           peakMonth: b.row.peakMonth ?? null,
         },
         cautions: b.notes,
+        myth: b.myth ?? null,
+        basis: b.basis ?? null,
+        basisIds: extractIds(b.basis),
         types: b.types,
       })),
     }, null, 2));
     return;
   }
 
-  console.log(briefs.map((b) => renderText(b.row, b.types, b.notes, b.myth)).join('\n\n' + '─'.repeat(60) + '\n\n'));
+  console.log(briefs.map((b) => renderText(b.row, b.types, b.notes, b.myth, b.basis)).join('\n\n' + '─'.repeat(60) + '\n\n'));
 }
 
 main().catch((e) => { console.error(e.message); process.exit(1); });
