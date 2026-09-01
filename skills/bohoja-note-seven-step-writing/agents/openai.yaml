@@ -1,0 +1,4 @@
+interface:
+  display_name: "보호자 노트 글쓰기 7단계"
+  short_description: "요양 정보 글을 근거·감사·승인 7단계로 제작"
+  default_prompt: "$bohoja-note-seven-step-writing으로 다음 보호자 노트 글을 7단계 전체 자동 모드로 작성해줘."

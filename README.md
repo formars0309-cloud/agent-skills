@@ -10,6 +10,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 |---|---|
 | [`citation-verify`](skills/citation-verify) | Resolves DOIs / PMIDs / PMCIDs against PubMed, Crossref and Europe PMC to catch fabricated, misattributed and retracted citations. |
 | [`clinical-writing`](skills/clinical-writing) | Discipline for clinical content a clinician will act on: guideline lookup before drafting, a source label on every dose and target, and cross-model review before delivery. |
+| [`bohoja-note-seven-step-writing`](skills/bohoja-note-seven-step-writing) | Produces Bohoja Note elder-care decision articles through evidence design, source tracing, value-density review, clinical approval, and publication gating. |
 | [`blueocean`](skills/blueocean) | Finds content topics where search demand is high but nobody has answered well, by measuring Naver monthly search volume against existing blog posts, discounted by how much of the top of the page is advertising. |
 | [`title-check`](skills/title-check) | Measures title candidates: which of several synonyms people actually search for, whether the keyword survives in the title, how closely it resembles existing posts, SERP truncation, and formulaic filler. |
 
@@ -17,7 +18,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 
 ```bash
 npx --yes skills add https://github.com/formars0309-cloud/agent-skills \
-  --skill citation-verify --skill clinical-writing \
+  --skill citation-verify --skill clinical-writing --skill bohoja-note-seven-step-writing \
   --skill blueocean --skill title-check \
   --global --agent claude-code -y
 ```
