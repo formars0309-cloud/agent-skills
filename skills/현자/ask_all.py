@@ -34,7 +34,7 @@ def cmd_for(agent, q, tmpdir):
         'claude': ['claude', '-p', q],
         'codex': ['codex', 'exec', '--skip-git-repo-check', '-s', 'read-only', '-o', out, q],
         'grok': ['grok', '-p', q],
-        'gemini': ['gemini', '--skip-trust', '-p', q],  # 신뢰 목록에 없는 폴더도 허용
+        'gemini': ['agy', '-p', q],  # 안티그래비티 CLI. 제미나이 CLI는 2026-06-18부터 구글 로그인(AI Pro) 불가
     }[agent], out
 
 

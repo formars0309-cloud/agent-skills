@@ -12,7 +12,7 @@ description: 현자(賢者) — 같은 질문을 claude·codex·grok·gemini CLI
 | claude | `claude -p "질문"` |
 | codex | `codex exec --skip-git-repo-check -s read-only -o <파일> "질문"` (최종 답만 파일로) |
 | grok | `grok -p "질문"` |
-| gemini | `gemini -p "질문"` |
+| gemini | `agy -p "질문"` (안티그래비티 CLI. 제미나이 CLI는 2026-06-18부터 구글 로그인이 막혀 AI Pro 구독을 못 쓴다) |
 
 ## 사용
 
@@ -43,5 +43,5 @@ python ask_all.py "질문"         # 직접 실행
 ## 한계
 
 - 네 CLI는 현재 프로젝트가 아니라 현자 폴더에서 돈다. 프로젝트 문맥이 필요한 질문엔 맞지 않는다.
-- 로그인·API 키는 각 CLI가 이미 갖고 있어야 한다. 없는 CLI는 "(CLI 없음)"으로 표시된다.
+- 로그인·API 키는 각 CLI가 이미 갖고 있어야 한다. 없는 CLI는 "(CLI 없음)"으로 표시된다. agy는 터미널에서 `agy`를 한 번 실행해 브라우저 구글 로그인을 마쳐야 한다(브라우저가 코드를 보여주면 터미널에 붙여넣는다).
 - 응답 시간은 가장 느린 CLI에 맞춰진다.
