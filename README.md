@@ -13,6 +13,10 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | [`bohoja-note-seven-step-writing`](skills/bohoja-note-seven-step-writing) | Produces Bohoja Note elder-care decision articles through evidence design, source tracing, value-density review, clinical approval, and publication gating. |
 | [`blueocean`](skills/blueocean) | Finds content topics where search demand is high but nobody has answered well, by measuring Naver monthly search volume against existing blog posts, discounted by how much of the top of the page is advertising. |
 | [`title-check`](skills/title-check) | Measures title candidates: which of several synonyms people actually search for, whether the keyword survives in the title, how closely it resembles existing posts, SERP truncation, and formulaic filler. |
+| [`title-draft`](skills/title-draft) | Turns a blueocean-picked keyword into a title brief: which title types the measurements support, hard cuts for banned phrases, and the hand-off to title-check. |
+| [`fact-integrity`](skills/fact-integrity) | Compares a source text with its derivative (summary, polish, platform port) to catch dropped or altered numbers and lost qualifiers. |
+| [`humanize-korean`](skills/humanize-korean) | Rewrites AI-written Korean so it reads as human prose without touching content; `codex/humanize-korean` is the Codex entry document sharing the same references. |
+| [`현자`](skills/현자) | Asks claude, codex, grok and Antigravity the same question at once and lays the four answers side by side as HTML and Markdown. |
 
 ## Install on another machine
 
@@ -39,7 +43,10 @@ ln -s ~/projects/agent-skills/skills/citation-verify ~/.claude/skills/citation-v
 
 ## How this checkout is wired on the main machine
 
-`~/.claude/skills/citation-verify` is a directory junction into this repo, so
+The main machine is a Mac since 2026-09-07: the checkout lives at `~/Projects/agent-skills`, and
+`~/.claude/skills/<skill>` and `~/.codex/skills/<skill>` are symlinks into `skills/`
+(`~/.codex/skills/humanize-korean` points at `codex/humanize-korean`). On the retired Windows box
+`~/.claude/skills/citation-verify` was a directory junction into this repo, so
 editing a skill here takes effect immediately in Claude Code — there is no copy
 to keep in sync. Committing is the backup step, nothing else.
 

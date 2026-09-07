@@ -22,7 +22,7 @@ description: 원본과 파생본(요약·윤문·플랫폼 이식본)을 대조�
 ## 사용법
 
 ```bash
-python scripts/check.py --base 원본.md --derived 윤문본.md
+python3 scripts/check.py --base 원본.md --derived 윤문본.md
 ```
 
 선택 인자

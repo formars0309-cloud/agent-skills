@@ -1,6 +1,6 @@
 ---
 name: 현자
-description: 현자(賢者) — 같은 질문을 claude·codex·grok·gemini CLI에 동시에 던지고 네 답을 한 HTML 화면(가로 4단)과 마크다운으로 모아 보여준다. 코딩이 아니라 "여러 AI 의견을 나란히 보고 싶을 때" 쓴다. 트리거 — "현자", "현자에게 물어봐", "현자 소집", "다 같이 물어봐", "여러 AI에게 동시에", "클로드 코덱스 그록 비교", "askall", "동시 답변", "AI 여러 개 의견", "ask all".
+description: 현자(賢者) — 같은 질문을 claude·codex·grok·Antigravity CLI에 동시에 던지고 네 답을 한 HTML 화면(가로 4단)과 마크다운으로 모아 보여준다. 코딩이 아니라 "여러 AI 의견을 나란히 보고 싶을 때" 쓴다. 트리거 — "현자", "현자에게 물어봐", "현자 소집", "다 같이 물어봐", "여러 AI에게 동시에", "클로드 코덱스 그록 비교", "askall", "동시 답변", "AI 여러 개 의견", "ask all".
 ---
 
 # 현자
@@ -12,7 +12,7 @@ description: 현자(賢者) — 같은 질문을 claude·codex·grok·gemini CLI
 | claude | `claude -p "질문"` |
 | codex | `codex exec --skip-git-repo-check -s read-only -o <파일> "질문"` (최종 답만 파일로) |
 | grok | `grok -p "질문"` |
-| gemini | `agy -p "질문"` (안티그래비티 CLI. 제미나이 CLI는 2026-06-18부터 구글 로그인이 막혀 AI Pro 구독을 못 쓴다) |
+| antigravity | `agy -p "질문"` (안티그래비티 CLI. `-a gemini`도 같은 명령을 부르는 호환 이름이다. 제미나이 CLI는 2026-06-18부터 구글 로그인이 막혀 AI Pro 구독을 못 쓴다) |
 
 ## 사용
 
@@ -21,7 +21,7 @@ description: 현자(賢者) — 같은 질문을 claude·codex·grok·gemini CLI
 askall -a claude,grok "질문"     # 일부만
 askall -t 600 "질문"             # 타임아웃 초 (기본 300)
 askall --no-open "질문"          # 브라우저 안 열기
-python ask_all.py "질문"         # 직접 실행
+python3 ask_all.py "질문"        # 직접 실행
 ```
 
 결과: `~/orca/projects/현자/answers/<시각>.md`·`.html` (기본 브라우저로 자동 열림). 터미널에도 마크다운을 그대로 찍는다.
@@ -30,7 +30,14 @@ python ask_all.py "질문"         # 직접 실행
 
 사용자가 "여러 AI에게 같이 물어봐"라고 하면 위 명령을 실행하고, 네 답의 **차이점**을 짧게 요약해 준다. 답 전체를 다시 옮겨 적지 않는다(HTML이 이미 열려 있다).
 
-## 설치 구조 (윈도우)
+## 설치 구조
+
+### macOS (주 기기, 2026-09-07 이전)
+
+`~/.local/bin/현자`·`askall`(셸 스크립트) → `/usr/bin/python3` 로 이 폴더의 `ask_all.py` 실행.
+스킬 등록은 `~/.claude/skills/현자`·`~/.codex/skills/현자` 심볼릭 링크. 결과 HTML은 `open`으로 연다.
+
+### 윈도우 (대구 PC, 이전 완료)
 
 `~/.local/bin/현자.cmd`·`askall.cmd`(ASCII만) → `~/.local/bin/askall.py`(실행기) → 이 폴더의 `ask_all.py`.
 배치 파일에 한글 경로를 직접 쓰면 콘솔 코드페이지가 65001일 때 cmd.exe가 줄을 어긋나게 읽어 깨진다. 그래서 한글 경로는 파이썬 실행기가 다룬다.
@@ -43,5 +50,5 @@ python ask_all.py "질문"         # 직접 실행
 ## 한계
 
 - 네 CLI는 현재 프로젝트가 아니라 현자 폴더에서 돈다. 프로젝트 문맥이 필요한 질문엔 맞지 않는다.
-- 로그인·API 키는 각 CLI가 이미 갖고 있어야 한다. 없는 CLI는 "(CLI 없음)"으로 표시된다. agy는 터미널에서 `agy`를 한 번 실행해 브라우저 구글 로그인을 마쳐야 한다(브라우저가 코드를 보여주면 터미널에 붙여넣는다).
+- 로그인·API 키는 각 CLI가 이미 갖고 있어야 한다. 없는 CLI는 "(CLI 없음)"으로 표시된다. agy는 터미널에서 `agy`를 한 번 실행해 브라우저 구글 로그인을 마쳐야 한다(브라우저가 코드를 보여주면 터미널에 붙여넣는다). 이 Mac에서는 로그인과 실제 응답 검증을 마쳤다(2026-09-07).
 - 응답 시간은 가장 느린 CLI에 맞춰진다.

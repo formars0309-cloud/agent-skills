@@ -2,7 +2,7 @@
 """현자 — 여러 AI CLI에 같은 질문을 동시에 던지고 답을 한 화면에 모은다.
 
 사용:
-  현자 "질문"                        # 기본: claude codex grok gemini (askall 도 같은 명령)
+  현자 "질문"                        # 기본: claude codex grok antigravity (askall 도 같은 명령)
   현자 -a claude,grok "질문"         # 일부만
   현자 -t 600 "질문"                 # 타임아웃(초, 기본 300)
   현자 --no-open "질문"              # 브라우저 안 열고 터미널 출력만
@@ -34,7 +34,8 @@ def cmd_for(agent, q, tmpdir):
         'claude': ['claude', '-p', q],
         'codex': ['codex', 'exec', '--skip-git-repo-check', '-s', 'read-only', '-o', out, q],
         'grok': ['grok', '-p', q],
-        'gemini': ['agy', '-p', q],  # 안티그래비티 CLI. 제미나이 CLI는 2026-06-18부터 구글 로그인(AI Pro) 불가
+        'antigravity': ['agy', '-p', q],
+        'gemini': ['agy', '-p', q],  # 기존 이름도 Antigravity로 연결
     }[agent], out
 
 
@@ -60,7 +61,7 @@ def ask(agent, q, timeout, cwd, tmpdir):
 def main():
     ap = argparse.ArgumentParser(description='여러 AI CLI에 동시에 질문')
     ap.add_argument('question', nargs='?', help='질문. 없으면 stdin에서 읽는다')
-    ap.add_argument('-a', '--agents', default='claude,codex,grok,gemini')
+    ap.add_argument('-a', '--agents', default='claude,codex,grok,antigravity')
     ap.add_argument('-t', '--timeout', type=int, default=300)
     ap.add_argument('--no-open', action='store_true')
     args = ap.parse_args()
@@ -113,7 +114,7 @@ def main():
         try:
             os.startfile(str(htmlpath))  # 윈도우 기본 브라우저
         except AttributeError:
-            subprocess.Popen(['xdg-open', str(htmlpath)])
+            subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', str(htmlpath)])
 
 
 if __name__ == '__main__':
