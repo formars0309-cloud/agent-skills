@@ -6,3 +6,4 @@ Thumbs.db
 # 자격증명은 저장소에 들어가지 않습니다
 .env
 *.naver-api.env
+__pycache__/

@@ -1,9 +1,9 @@
 ---
-name: ask-all
-description: 같은 질문을 claude·codex·grok·gemini CLI에 동시에 던지고 네 답을 한 HTML 화면(가로 4단)과 마크다운으로 모아 보여준다. 코딩이 아니라 "여러 AI 의견을 나란히 보고 싶을 때" 쓴다. 트리거 — "다 같이 물어봐", "여러 AI에게 동시에", "클로드 코덱스 그록 비교", "askall", "동시 답변", "AI 여러 개 의견", "ask all".
+name: 현자
+description: 현자(賢者) — 같은 질문을 claude·codex·grok·gemini CLI에 동시에 던지고 네 답을 한 HTML 화면(가로 4단)과 마크다운으로 모아 보여준다. 코딩이 아니라 "여러 AI 의견을 나란히 보고 싶을 때" 쓴다. 트리거 — "현자", "현자에게 물어봐", "현자 소집", "다 같이 물어봐", "여러 AI에게 동시에", "클로드 코덱스 그록 비교", "askall", "동시 답변", "AI 여러 개 의견", "ask all".
 ---
 
-# ask-all
+# 현자
 
 `ask_all.py` 하나가 전부다. 표준 라이브러리만 쓰고, 각 CLI의 비대화형 모드를 병렬로 실행한다.
 
@@ -17,7 +17,7 @@ description: 같은 질문을 claude·codex·grok·gemini CLI에 동시에 던�
 ## 사용
 
 ```
-askall "질문"                    # 터미널 어디서나 (~/.local/bin/askall.cmd)
+현자 "질문"                      # 터미널 어디서나 (~/.local/bin/현자.cmd, askall.cmd 도 같음)
 askall -a claude,grok "질문"     # 일부만
 askall -t 600 "질문"             # 타임아웃 초 (기본 300)
 askall --no-open "질문"          # 브라우저 안 열기
