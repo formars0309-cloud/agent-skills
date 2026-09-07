@@ -39,3 +39,7 @@
 이 폴더는 이때부터 원격과 연결된 git 체크아웃이다. 오늘 Mac에서 고친 보호자 노트 교차 검수 규칙, fact-integrity의 python3 표기, humanize-korean·codex 진입 문서도 같이 커밋했다. `~/.codex/daegu-import/`의 원본 사본은 이 커밋에 모두 포함됐으므로 삭제했다.
 
 대구 PC의 현자 작업 폴더(`~/orca/projects/현자`)는 원격이 없어 그쪽 `answers/` 기록은 가져오지 못했다. Mac 쪽 기록은 비공개 저장소 `formars0309-cloud/hyunja`에 백업한다.
+
+## 2026-09-07 밤 — 현자 스킬을 별도 저장소로 분리
+
+현자를 남에게도 나눠 주기 위해 `formars0309-cloud/hyunja`(스킬 코드, 공개 예정)로 옮겼다. 이 저장소의 `skills/현자`는 지웠고, `~/.claude/skills/현자`·`~/.codex/skills/현자` 링크와 `~/.local/bin/현자`·`askall` 실행기는 `~/Projects/hyunja`를 가리킨다. 개인 설정(작업 폴더 `~/orca/projects/현자`, 자동 커밋)은 `~/.config/hyunja/env`에 있다. 질문 기록 저장소는 `hyunja-answers`로 이름을 바꿨다.
