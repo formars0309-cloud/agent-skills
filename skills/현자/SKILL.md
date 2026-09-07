@@ -17,7 +17,7 @@ description: 현자(賢者) — 같은 질문을 claude·codex·grok·gemini CLI
 ## 사용
 
 ```
-현자 "질문"                      # 터미널 어디서나 (~/.local/bin/현자.cmd, askall.cmd 도 같음)
+현자 "질문"                      # 터미널 어디서나. askall "질문" 도 같은 명령
 askall -a claude,grok "질문"     # 일부만
 askall -t 600 "질문"             # 타임아웃 초 (기본 300)
 askall --no-open "질문"          # 브라우저 안 열기
@@ -29,6 +29,12 @@ python ask_all.py "질문"         # 직접 실행
 ## 에이전트가 쓸 때
 
 사용자가 "여러 AI에게 같이 물어봐"라고 하면 위 명령을 실행하고, 네 답의 **차이점**을 짧게 요약해 준다. 답 전체를 다시 옮겨 적지 않는다(HTML이 이미 열려 있다).
+
+## 설치 구조 (윈도우)
+
+`~/.local/bin/현자.cmd`·`askall.cmd`(ASCII만) → `~/.local/bin/askall.py`(실행기) → 이 폴더의 `ask_all.py`.
+배치 파일에 한글 경로를 직접 쓰면 콘솔 코드페이지가 65001일 때 cmd.exe가 줄을 어긋나게 읽어 깨진다. 그래서 한글 경로는 파이썬 실행기가 다룬다.
+스킬 등록은 `~/.claude/skills/현자` 정션.
 
 ## 한계
 
