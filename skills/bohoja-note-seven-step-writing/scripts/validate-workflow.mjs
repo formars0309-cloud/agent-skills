@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { MAX_CONTENT_ATTEMPTS, articleSha, openFindings, reconcileAudits, runnerAudits } from './audit-utils.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -80,13 +82,57 @@ if (reviewRaw && !/## 자동 감사 최종 판정:\s*통과/.test(reviewRaw)) {
 }
 
 if (reviewRaw) {
-  const factReview = reviewRaw.split('## 사실 감사')[1]?.split('## 가치·밀도 감사')[0] ?? '';
-  const valueReview = reviewRaw.split('## 가치·밀도 감사')[1]?.split('## 독립 검수 기록')[0] ?? '';
+  // 제목 행이 정확히 일치하는 절만 본다("## 사실 감사 새 터미널·새 세션 실행 기록" 같은 이웃 절과 섞이지 않게).
+  const section = (heading) => {
+    const m = reviewRaw.replace(/\r\n/g, '\n').match(new RegExp(`^## ${heading}\\s*$\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm'));
+    return m ? m[1] : '';
+  };
+  const factReview = section('사실 감사');
+  const valueReview = section('가치·밀도 감사');
   if (!/### 판정:\s*통과\s*(?:\r?\n|$)/.test(factReview)) {
     errors.push(`${join(dir, '06-prepublish-audit.md')}: 사실 감사 판정이 통과가 아닙니다.`);
   }
   if (!/### 판정:\s*통과\s*(?:\r?\n|$)/.test(valueReview)) {
     errors.push(`${join(dir, '06-prepublish-audit.md')}: 가치·밀도 감사 판정이 통과가 아닙니다.`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 독립 검수 실행 기록(2026-09-08 판정·종료 방식 개선). 실행기(run-audit.mjs)가 만든 기록만 계약 대상이다.
+// 과거 ad hoc 기록(schemaVersion 없음)은 이력으로만 보고 재분류하지 않는다.
+const auditsDir = join(dir, 'audits');
+if (existsSync(auditsDir)) {
+  const lost = reconcileAudits(auditsDir);
+  if (lost.length) warnings.push(`${auditsDir}: 실행 기록만 있고 프로세스가 없는 검수를 lost로 확정했습니다: ${lost.join(', ')}`);
+  const siteSha = finalRaw ? articleSha(finalRaw) : null;
+  for (const kind of ['stage3', 'final-fact', 'final-value']) {
+    const runs = runnerAudits(auditsDir, kind);
+    if (!runs.length) { warnings.push(`${auditsDir}: ${kind} 실행기 기록이 없습니다. 단계 파일의 판정만 검사합니다(과거 방식).`); continue; }
+    const label = `${auditsDir}/${kind}`;
+    const running = runs.filter((r) => r.execution.status === 'running');
+    if (running.length) errors.push(`${label}: 아직 실행 중으로 기록된 검수가 있습니다(${running.map((r) => r.name).join(', ')}). 완료 전에는 통과할 수 없습니다.`);
+    const completed = runs.filter((r) => ['completed', 'confirmed'].includes(r.execution.status));
+    if (completed.length > MAX_CONTENT_ATTEMPTS && !existsSync(join(auditsDir, `${kind}-hold-resolved.md`))) {
+      errors.push(`${label}: 내용 검수 ${completed.length}회로 상한 ${MAX_CONTENT_ATTEMPTS}회를 넘겼는데 보류 해제 기록(${kind}-hold-resolved.md)이 없습니다.`);
+    }
+    const last = runs.at(-1);
+    const e = last.execution;
+    if (['lost', 'timeout', 'failed', 'aborted'].includes(e.status)) {
+      errors.push(`${label}: 마지막 실행 ${last.name}이 실행 보류(${e.status}: ${e.reason ?? '사유 없음'})입니다. 새 검수 없이 통과할 수 없습니다.`);
+      continue;
+    }
+    if (e.status === 'completed' && e.verdict !== '통과') {
+      errors.push(`${label}: 마지막 판정이 ${e.verdict}입니다(${last.name}). ${e.verdict === '수정 후 확인' ? '기계 대조 종결(confirm-findings.mjs)이나 새 검수가 필요합니다.' : '차단 지적을 해소한 새 검수가 필요합니다.'}`);
+    }
+    if (e.status === 'confirmed') {
+      const open = openFindings(e);
+      if (open.some((f) => f.severity === '차단' || f.kind === '내용')) errors.push(`${label}: 확인 종결 기록에 차단·내용 수정 지적이 섞여 있습니다.`);
+    }
+    // SHA 변경 → 이전 판정 오용 금지. 최종 검수는 현재 사이트 정본과 같은 원고를 봤어야 한다.
+    if (kind !== 'stage3' && siteSha) {
+      const judged = e.status === 'confirmed' ? e.confirmation?.inputsAfter?.draftArticleSha : e.inputs?.draftArticleSha;
+      if (judged && judged !== siteSha) errors.push(`${label}: 검수한 원고 SHA(${judged.slice(0, 12)}…)가 현재 정본(${siteSha.slice(0, 12)}…)과 다릅니다. 예전 판정을 새 원고의 통과로 쓸 수 없습니다.`);
+    }
   }
 }
 
