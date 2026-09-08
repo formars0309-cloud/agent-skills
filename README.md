@@ -16,6 +16,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | [`title-draft`](skills/title-draft) | Turns a blueocean-picked keyword into a title brief: which title types the measurements support, hard cuts for banned phrases, and the hand-off to title-check. |
 | [`fact-integrity`](skills/fact-integrity) | Compares a source text with its derivative (summary, polish, platform port) to catch dropped or altered numbers and lost qualifiers. |
 | [`humanize-korean`](skills/humanize-korean) | Rewrites AI-written Korean so it reads as human prose without touching content; `codex/humanize-korean` is the Codex entry document sharing the same references. |
+| [`suno`](skills/suno) | Aside로 Suno에서 게임 배경음·효과음·환경음을 기획·생성·검수·다운로드한다. |
 | 현자 | Moved to its own repo, [formars0309-cloud/hyunja](https://github.com/formars0309-cloud/hyunja), on 2026-09-07 so it can be shared on its own. |
 
 ## Install on another machine

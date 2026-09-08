@@ -1,0 +1,4 @@
+interface:
+  display_name: "Suno 게임 오디오"
+  short_description: "Suno에서 게임 배경음·효과음·환경음을 만들고 내려받습니다"
+  default_prompt: "$suno로 게임에 쓸 배경음과 효과음을 만들어줘."
