@@ -18,7 +18,7 @@ import {
 } from './audit-utils.mjs';
 
 const args = process.argv.slice(2);
-const VALUE_FLAGS = ['--kind', '--input', '--focus', '--timeout-min'];
+const VALUE_FLAGS = ['--kind', '--input', '--focus', '--timeout-min', '--reviewer', '--model'];
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
 const positional = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && VALUE_FLAGS.includes(args[i - 1])));
 const slug = positional[0];
@@ -28,6 +28,9 @@ const focus = flag('--focus');
 const timeoutMin = Number(flag('--timeout-min') || 45);
 const afterHold = args.includes('--after-hold');
 const dryRun = args.includes('--dry-run');
+const reviewer = flag('--reviewer') || 'codex';
+const reviewerModel = flag('--model');
+if (!['codex', 'claude'].includes(reviewer)) { console.error('--reviewer는 codex 또는 claude입니다.'); process.exit(5); }
 
 function fail(code, message) { console.error(`[검수 실행기] ${message}`); process.exit(code); }
 if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !AUDIT_KINDS.includes(kind) || !inputDir) {
@@ -69,8 +72,8 @@ if (kind !== 'stage3') {
     if (draftRaw && articleSha(draftRaw) !== siteArticleShaValue) problems.push('draft.md가 사이트 정본과 다릅니다(draft 상태 제외). 최종 검수 입력은 정본과 같아야 합니다.');
   }
 }
-const codexVersion = spawnSync('codex', ['--version'], { encoding: 'utf8' });
-if (codexVersion.status !== 0) problems.push('codex CLI를 실행하지 못했습니다.');
+const codexVersion = spawnSync(reviewer, ['--version'], { encoding: 'utf8' });
+if (codexVersion.status !== 0) problems.push(`${reviewer} CLI를 실행하지 못했습니다.`);
 if (problems.length) {
   console.error('[검수 실행기] 입력 검증 실패 — Codex를 시작하지 않습니다.');
   for (const p of problems) console.error('  - ' + p);
@@ -129,7 +132,8 @@ const execution = {
   schemaVersion: 1, kind, slug, runDir: `content-work/${slug}/audits/${runName}`, attempt: completed.length + 1,
   status: 'running', startedAt, deadlineAt, timeoutMin, focus: focus ?? null,
   runnerPid: process.pid, runnerStart: processStart(process.pid), codexPid: null, codexStart: null,
-  model: modelMatch ? modelMatch[1] : 'CLI default', cliVersion: codexVersion.stdout.trim(),
+  reviewer, requestedModel: reviewerModel ?? null, terminalId: process.env.ORCA_TERMINAL_ID ?? process.env.ORCA_TERMINAL_HANDLE ?? null,
+  model: reviewer === 'codex' && modelMatch ? modelMatch[1] : 'CLI default', cliVersion: codexVersion.stdout.trim(),
   inputDirectory: inputDir, before, promptSha256: sha256(prompt),
   inputs: { draftArticleSha: articleSha(draftRaw), siteArticleSha: siteArticleShaValue, briefSha256: before['brief.md'] ?? null },
   prompt: join(runDir, 'prompt.txt'), rawOutput: join(runDir, 'raw.jsonl'), verdictFile: join(runDir, 'verdict.md'),
@@ -142,8 +146,12 @@ writeJsonAtomic(executionPath, execution);
 // ---------- 4. 실행: 타임아웃·신호·예외를 모두 기록한다 ----------
 const rawFd = openSync(join(runDir, 'raw.jsonl'), 'w');
 const errFd = openSync(join(runDir, 'stderr.txt'), 'w');
-const child = spawn('codex', ['exec', '-s', 'read-only', '--skip-git-repo-check', '--ephemeral', '--json', '-C', inputDir, '-o', join(runDir, 'verdict.md'), '-'],
-  { stdio: ['pipe', rawFd, errFd] });
+// Claude에도 새 비저장 세션과 읽기 전용 도구만 제공한다. 원고 수정 도구는 노출하지 않는다.
+const reviewerArgs = reviewer === 'codex'
+  ? ['exec', '-s', 'read-only', '--skip-git-repo-check', '--ephemeral', '--json', '-C', inputDir, '-o', join(runDir, 'verdict.md'), '-']
+  : ['-p', '--no-session-persistence', '--output-format', 'stream-json', '--verbose', '--safe-mode', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--tools', 'Read,Glob,Grep,WebFetch,WebSearch', '--allowedTools', 'Read,Glob,Grep,WebFetch,WebSearch', '--permission-mode', 'dontAsk', '--disable-slash-commands'];
+if (reviewerModel) reviewerArgs.push('--model', reviewerModel);
+const child = spawn(reviewer, reviewerArgs, { cwd: inputDir, stdio: ['pipe', rawFd, errFd] });
 execution.codexPid = child.pid;
 execution.codexStart = processStart(child.pid);
 writeJsonAtomic(executionPath, execution);
@@ -163,7 +171,7 @@ function finalize(status, extra = {}) {
   } catch (error) { execution.inputUnchanged = false; execution.hashError = error.message; }
   try {
     const rawLines = readFileSync(join(runDir, 'raw.jsonl'), 'utf8').split('\n');
-    for (const line of rawLines) { try { const j = JSON.parse(line); if (j.type === 'thread.started') execution.sessionId = j.thread_id; } catch {} }
+    for (const line of rawLines) { try { const j = JSON.parse(line); if (j.type === 'thread.started') execution.sessionId = j.thread_id; if (reviewer === 'claude') { if (j.session_id) execution.sessionId = j.session_id; if (j.type === 'system' && j.model) execution.model = j.model; if (j.type === 'result' && j.modelUsage) execution.actualModels = Object.keys(j.modelUsage); } } catch {} }
   } catch {}
   writeJsonAtomic(executionPath, execution);
 }
@@ -199,9 +207,19 @@ child.on('close', (code, signal) => {
   if (finished) return;
   const exitCode = typeof code === 'number' ? code : null;
   if (exitCode !== 0) {
-    finalize('failed', { reason: signal ? `codex가 ${signal}로 종료됨` : `codex 종료 코드 ${exitCode}`, exitCode, signal: signal ?? null });
+    finalize('failed', { reason: signal ? `${reviewer}가 ${signal}로 종료됨` : `${reviewer} 종료 코드 ${exitCode}`, exitCode, signal: signal ?? null });
     console.error(`[검수 실행기] 실행 보류: ${execution.reason}. 기록 ${execution.runDir}/execution.json`);
     process.exit(6);
+  }
+  if (reviewer === 'claude') {
+    // 원출력과 최종 판정을 분리한다. 오류 응답은 통과로 해석하지 않는다.
+    const events = readFileSync(join(runDir, 'raw.jsonl'), 'utf8').split('\n').flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } });
+    const result = events.findLast(event => event.type === 'result');
+    if (!result || result.is_error || typeof result.result !== 'string') {
+      finalize('failed', { reason: 'Claude 최종 응답 누락 또는 오류', exitCode });
+      console.error('[검수 실행기] Claude 최종 응답 누락 또는 오류'); process.exit(6);
+    }
+    writeFileSync(join(runDir, 'verdict.md'), result.result, 'utf8');
   }
   let verdictRaw = '';
   try { verdictRaw = readFileSync(join(runDir, 'verdict.md'), 'utf8'); } catch {}
@@ -224,7 +242,7 @@ child.on('close', (code, signal) => {
   console.log('\n[단계 기록에 옮길 실행 기록]');
   console.log([
     `- 회차: ${execution.attempt} (상한 ${MAX_CONTENT_ATTEMPTS})`,
-    `- 세션 ID 또는 비저장 실행 ID/PID: ${execution.sessionId ?? '없음'} / runner ${execution.runnerPid} / codex ${execution.codexPid}`,
+    `- 세션 ID 또는 비저장 실행 ID/PID: ${execution.sessionId ?? '없음'} / runner ${execution.runnerPid} / ${reviewer} ${execution.codexPid}`,
     `- 모델·CLI 버전: ${execution.model} · ${execution.cliVersion}`,
     `- 시작·종료 시각: ${execution.startedAt} ~ ${execution.endedAt}`,
     `- 입력 파일·SHA-256: draft.md ${before['draft.md']} · brief.md ${before['brief.md']} · 원고 정규화 SHA ${execution.inputs.draftArticleSha}`,
