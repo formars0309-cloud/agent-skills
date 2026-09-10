@@ -16,6 +16,13 @@ const waitName = flag('--wait');
 const timeoutMin = flag('--timeout-min') ? Number(flag('--timeout-min')) : null;
 const asJson = args.includes('--json');
 if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) { console.error('사용법: audit-status.mjs <slug> [--wait <실행 폴더>] [--timeout-min N] [--json]'); process.exit(5); }
+// NaN/Infinity나 누락된 값으로 마감 비교가 무력화되지 않게 대기 전에 검사한다.
+if (args.includes('--timeout-min') && (!Number.isFinite(timeoutMin) || timeoutMin <= 0 || timeoutMin > 45)) {
+  console.error('--timeout-min은 0보다 크고 45 이하인 유한한 분 값이어야 합니다.'); process.exit(5);
+}
+if (args.includes('--wait') && (!waitName || !/^(stage3|final-fact|final-value)-r[1-9]\d*$/.test(waitName))) {
+  console.error('--wait에는 stage3-r1처럼 실행 폴더 이름을 지정하세요.'); process.exit(5);
+}
 const auditsDir = join(process.cwd(), 'content-work', slug, 'audits');
 function report() {
   const changed = reconcile(auditsDir);
@@ -37,7 +44,13 @@ if (!waitName) { report(); process.exit(0); }
 const path = join(auditsDir, waitName, 'execution.json');
 const first = readJson(path);
 if (!first) { console.error(`실행 기록이 없습니다: ${path}`); process.exit(5); }
-const bound = Date.now() + (timeoutMin ? timeoutMin * 60000 : Math.max(0, Date.parse(first.deadlineAt ?? Date.now()) - Date.now()) + 5 * 60000);
+const now = Date.now();
+const deadline = Date.parse(first.deadlineAt);
+if (first.status === 'running' && !Number.isFinite(deadline)) {
+  console.error('실행 마감이 없거나 잘못됐습니다. 대기를 시작하지 않고 실행 보류로 반환합니다.'); process.exit(6);
+}
+// 재호출해도 기록된 마감(+정리 유예 5분)을 넘겨 새 대기 창을 만들지 않는다.
+const bound = Math.min(now + (timeoutMin ?? 45) * 60000, Number.isFinite(deadline) ? deadline + 5 * 60000 : now);
 while (true) {
   reconcile(auditsDir);
   const e = readJson(path);
@@ -50,5 +63,5 @@ while (true) {
     console.error(`[감독] 대기 상한 도달 — ${waitName}은 아직 running 기록입니다. 실행 보류로 처리하세요.`);
     process.exit(6);
   }
-  await new Promise((r) => setTimeout(r, 10000));
+  await new Promise((r) => setTimeout(r, Math.max(1, Math.min(10000, bound - Date.now()))));
 }
