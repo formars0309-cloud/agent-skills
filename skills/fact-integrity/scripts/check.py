@@ -87,6 +87,13 @@ def numbers(text: str, ignore) -> dict:
     return out
 
 
+def qualifier_count(text: str, qualifier: str) -> int:
+    """‘이상사건’의 명사 일부를 크기 비교 한정어로 세지 않는다."""
+    if qualifier == "이상":
+        text = text.replace("이상사건", "")
+    return text.count(qualifier)
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="기준본과 파생본을 대조해 수치 누락·변경과 한정어 소실을 찾는다.")
@@ -163,7 +170,7 @@ def main():
 
     # 3. 결론 한정어 누락
     for q in QUALIFIERS_CRITICAL:
-        b, dd = base.count(q), der.count(q)
+        b, dd = qualifier_count(base, q), qualifier_count(der, q)
         if b > 0 and dd == 0:
             problems.append(f"한정어 소실  '{q}'  (기준본 {b}회 → 파생본 0회) — 결론 범위가 넓어졌는지 확인")
     for q in QUALIFIERS_SOFT:
