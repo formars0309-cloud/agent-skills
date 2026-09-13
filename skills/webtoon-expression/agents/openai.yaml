@@ -2,3 +2,5 @@ interface:
   display_name: "웹툰 표정 연출"
   short_description: "캐릭터의 감정·표정·몸짓과 컷별 반응을 설계하고 검수합니다"
   default_prompt: "$webtoon-expression으로 이 장면의 표정과 반응을 설계하고, 캐릭터를 유지하는 컷별 생성 지시문을 만들어줘."
+policy:
+  allow_implicit_invocation: true
