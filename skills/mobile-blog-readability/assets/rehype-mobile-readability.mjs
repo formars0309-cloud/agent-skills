@@ -8,6 +8,9 @@ export function sentenceRanges(text) {
   const endings = /[가-힣0-9%)\]][.!?](?:(?:\s*\[\d+(?:[,–—\-\s]+\d+)*\])|[”’"'」』)\]])*\s+/g;
   for (const m of text.matchAll(endings)) {
     const end = m.index + m[0].length;
+    // 줄 맨 앞의 5. 같은 목록 번호는 문장이 아니다.
+    const lineStart = text.lastIndexOf('\n', m.index) + 1;
+    if (/^\s*\d+$/.test(text.slice(lineStart, m.index + 1))) continue;
     if (end >= text.length || protectedRanges.some(([a, b]) => m.index >= a && m.index < b)) continue;
     // 인용을 받는 조사/서술을 별도 문장으로 만들지 않는다.
     if (/^(?:라고|이라고|라는|이라는|라며|이라며|고\s|하며|하고)/.test(text.slice(end))) continue;
@@ -49,7 +52,15 @@ function splitParagraph(node) {
   if (unsupported) return [node];
   const text = textOf(node);
   const ends = sentenceRanges(text).map((r) => r[1]);
-  const accepted = ends.filter((end) => !links.some(([a, b]) =>
+  const citationTail = (end) => {
+    const tailLinks = links.filter(([a]) => a >= end);
+    if (!tailLinks.length) return false;
+    let remaining = ''; let offset = end;
+    for (const [a, b] of tailLinks) { remaining += text.slice(offset, a); offset = b; }
+    remaining += text.slice(offset);
+    return /^[\s.,·;()[\]{}]*$/.test(remaining);
+  };
+  const accepted = ends.filter((end) => !citationTail(end) && !links.some(([a, b]) =>
     (end > a && end < b) || (a === end && !text.slice(b).trim())
   ));
   if (accepted.length < 2) return [node];
@@ -72,8 +83,14 @@ function splitParagraph(node) {
   return parts;
 }
 
-function enumerateParagraph(node) {
+function enumerateParagraph(node, options = {}) {
   const text = textOf(node);
+  // Markdown이 문단으로 남긴 연속 번호 줄을 실제 목록으로 복원한다.
+  const numeric = [...text.matchAll(/(?:^|\n)[ \t]*(\d+)\.[ \t]+/g)];
+  if (numeric.length >= 2 && numeric.every((m, i) => i === 0 || +m[1] === +numeric[i - 1][1] + 1)) {
+    const slice = (start, end) => { const state = {offset: 0}; return {...node, children: node.children.map(c => inlineSlice(c, start, end, state)).filter(Boolean)}; };
+    return [...(numeric[0].index ? [slice(0,numeric[0].index)] : []), {type:'element',tagName:'ol',properties:{className:['mobile-enumeration'],start:+numeric[0][1]},children:numeric.map((m,i)=>({type:'element',tagName:'li',properties:{},children:[slice(m.index+m[0].length,numeric[i+1]?.index??text.length)]}))}];
+  }
   const matches = [...text.matchAll(/(?:^|\s)(첫째|둘째|셋째|넷째|다섯째|여섯째),\s*/g)];
   if (matches.length < 2 || matches[0][1] !== '첫째' || matches[1][1] !== '둘째') return null;
   const slice = (start, end) => {
@@ -81,10 +98,11 @@ function enumerateParagraph(node) {
     return { ...node, children: node.children.map((child) => inlineSlice(child, start, end, state)).filter(Boolean) };
   };
   const prefix = matches[0].index > 0 ? [slice(0, matches[0].index)] : [];
+  const tailStart = Math.min(text.length, ...(options.enumerationEndBefore ?? []).map(prefix => text.indexOf(prefix, matches.at(-1).index)).filter(i => i >= 0));
   const items = matches.map((m, index) => ({ type: 'element', tagName: 'li', properties: {}, children: [
-    slice(m.index + m[0].length, matches[index + 1]?.index ?? text.length),
+    slice(m.index + m[0].length, matches[index + 1]?.index ?? tailStart),
   ] }));
-  return [...prefix, { type: 'element', tagName: 'ul', properties: { className: ['mobile-enumeration'] }, children: items }];
+  return [...prefix, { type: 'element', tagName: 'ul', properties: { className: ['mobile-enumeration'] }, children: items }, ...(tailStart < text.length ? [slice(tailStart,text.length)] : [])];
 }
 
 export default function rehypeMobileReadability(options = {}) {
@@ -164,7 +182,7 @@ export default function rehypeMobileReadability(options = {}) {
       const skip = excluded || ['table', 'pre', 'code', 'figure', 'figcaption', 'h1', 'h2', 'h3', 'h4'].includes(node.tagName);
       node.children = node.children.flatMap((child) => {
         if (!skip && child.type === 'element' && child.tagName === 'p') {
-          const enumerated = enumerateParagraph(child);
+          const enumerated = enumerateParagraph(child, options);
           if (enumerated) return enumerated.flatMap((part) => {
             if (part.tagName === 'p') return splitParagraph(part);
             walk(part, skip); return [part];

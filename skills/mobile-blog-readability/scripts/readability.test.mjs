@@ -21,6 +21,27 @@ test('약어 풀이 뒤 조사를 맞추고 서지 목록을 본문 목록과 �
   assert.deepEqual(tree.children.at(-1).properties.className,['mobile-bibliography']);
 });
 
+test('문장 끝의 여러 출처 링크를 묶고 연속 번호 줄을 목록으로 복원한다', () => {
+  const cited={type:'root',children:[el('p',[text('조건입니다. '),el('a',[text('근거 A')],{href:'/a'}),text(', '),el('a',[text('근거 B')],{href:'/b'})])]};
+  transform()(cited);
+  assert.equal(cited.children.length,1);
+  const numbered={type:'root',children:[el('p',[text('조사 당일\n5. 조건입니다. 예외입니다.\n6. 다른 조건입니다.')])]};
+  transform()(numbered);
+  assert.equal(numbered.children[1].tagName,'ol');
+  assert.equal(numbered.children[1].properties.start,5);
+  assert.equal(numbered.children[1].children.length,2);
+  assert.equal(flatten(numbered.children[1].children[0]),'조건입니다. 예외입니다.');
+  assert.deepEqual(splitKoreanSentences('5. 조건입니다. 다음입니다.'),['5. 조건입니다.','다음입니다.']);
+});
+
+test('검토된 요약 경계는 마지막 목록 밖에 유지한다', () => {
+  const tree={type:'root',children:[el('p',[text('두 가지입니다. 첫째, 대상입니다. 둘째, 비용입니다. 요약하면 둘 다 확인합니다.')])]};
+  transform({enumerationEndBefore:['요약하면']})(tree);
+  assert.equal(tree.children[1].tagName,'ul');
+  assert.deepEqual(tree.children[1].children.map(n => flatten(n).trim()),['대상입니다.','비용입니다.']);
+  assert.equal(flatten(tree.children[2]),'요약하면 둘 다 확인합니다.');
+});
+
 test('문장 분리 후 가시 텍스트와 링크 목적지·강조·목록 항목 수를 유지한다', () => {
   const link = el('a', [text('근거')], { href: 'https://example.com' });
   const tree = { type: 'root', children: [el('p', [text('첫째는 '), el('strong', [text('아니다. 조건은 같다.')]), text(' '), link]), el('ul', [el('li', [text('첫 문장이다. 둘째 문장이다.')])])] };
