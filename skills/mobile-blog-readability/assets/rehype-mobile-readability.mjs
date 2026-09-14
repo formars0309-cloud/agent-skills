@@ -60,16 +60,24 @@ function splitParagraph(node) {
     remaining += text.slice(offset);
     return /^[\s.,·;()[\]{}]*$/.test(remaining);
   };
-  const accepted = ends.filter((end) => !citationTail(end) && !links.some(([a, b]) =>
+  const nominalLabel = (start, end) => {
+    const part = inlineSlice(node, start, end, {offset: 0});
+    const children = (part?.children ?? []).filter(c => c.type !== 'text' || c.value.trim());
+    const label = textOf(part ?? {}).trim();
+    return children.length === 1 && children[0].tagName === 'strong' && /\.$/.test(label) && !/(?:다|요|죠)\.$/.test(label);
+  };
+  const accepted = ends.filter((end, index) => !nominalLabel(ends[index - 1] ?? 0, end) && !citationTail(end) && !links.some(([a, b]) =>
     (end > a && end < b) || (a === end && !text.slice(b).trim())
   ));
-  if (accepted.length < 2) return [node];
+  const hasLabel = nominalLabel(0, ends[0]);
+  if (accepted.length < 2) return [hasLabel ? {...node, properties: {...node.properties, 'data-mobile-nominal-label': ''}} : node];
   let start = 0;
   const parts = accepted.map((end) => {
+    const isLabelPart = start === 0 && hasLabel;
     const state = { offset: 0 };
     const children = node.children.map((child) => inlineSlice(child, start, end, state)).filter(Boolean);
     start = end;
-    return { ...node, properties: { ...node.properties, 'data-mobile-sentence': '' }, children };
+    return { ...node, properties: { ...node.properties, 'data-mobile-sentence': '', ...(isLabelPart ? {'data-mobile-nominal-label': ''} : {}) }, children };
   });
   // 여러 문장의 직접 인용은 한 문단 안에서 빈 줄을 만들어 인용 범위를 유지한다.
   const quotes = [...text.matchAll(/[“「『][\s\S]*?[”」』]|"[^"\n]+"/g)];

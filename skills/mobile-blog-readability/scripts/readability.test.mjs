@@ -13,6 +13,14 @@ const text = (value) => ({ type: 'text', value });
 const el = (tagName, children, properties = {}) => ({ type: 'element', tagName, properties, children });
 const flatten = (node) => node.type === 'text' ? node.value : (node.children ?? []).map(flatten).join('');
 
+test('굵은 명사형 머리말은 설명에 붙이고 완성 문장은 구분한다', () => {
+  const tree={type:'root',children:[el('p',[el('strong',[text('감경.')]),text(' 대상에 따라 다릅니다. 조건을 확인합니다.')]),el('p',[el('strong',[text('대상입니다.')]),text(' 조건을 확인합니다.')])]};
+  transform()(tree);
+  assert.equal(tree.children.length,4);
+  assert.equal(flatten(tree.children[0]).trim(),'감경. 대상에 따라 다릅니다.');
+  assert.equal(flatten(tree.children[2]).trim(),'대상입니다.');
+});
+
 test('약어 풀이 뒤 조사를 맞추고 서지 목록을 본문 목록과 구분한다', () => {
   const tree = {type:'root', children:[el('p',[text('ISG가 작동합니다. ISG는 다시 확인합니다.')]),el('h2',[text('출처')]),el('ul',[el('li',[text('공식 자료')])])]};
   transform({glossary:{ISG:'공회전 제한 시스템(ISG)'}})(tree);
