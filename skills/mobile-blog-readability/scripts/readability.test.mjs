@@ -213,3 +213,18 @@ test('쉼표 목록 주변의 공백만 있는 문단을 만들지 않는다', (
   assert.equal(tree.children[0].tagName,'ul');
   assert.equal(tree.children[0].children.length,2);
 });
+
+test('굵은 서수 마커를 제거하고 인용 안 목록은 임의 변환하지 않는다', () => {
+  const paragraph=()=>el('p',[el('strong',[text('첫째,')]),text(' 첫 항목이다. '),el('strong',[text('둘째,')]),text(' 둘째 항목이다.')]);
+  const tree={type:'root',children:[paragraph(),el('blockquote',[paragraph()])]};
+  transform()(tree);
+  assert.equal(tree.children[0].tagName,'ul');
+  assert.equal(flatten(tree.children[0]).includes('첫째,'),false);
+  assert.equal(tree.children[1].children.some(n=>['ul','ol'].includes(n.tagName)),false);
+  assert.ok(flatten(tree.children[1]).includes('첫째,'));
+});
+test('확인한 단계 절차는 ol로 순서를 전달한다', () => {
+  const tree={type:'root',children:[el('p',[text('세 단계입니다. 첫째, 신청합니다. 둘째, 조사합니다. 셋째, 판정합니다.')])]};
+  transform({orderedEnumerationWhen:['세 단계입니다.']})(tree);
+  assert.equal(tree.children.find(n=>n.tagName==='ol').children.length,3);
+});

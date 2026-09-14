@@ -141,7 +141,8 @@ function enumerateParagraph(node, options = {}) {
   const items = matches.map((m, index) => ({ type: 'element', tagName: 'li', properties: {}, children: [
     slice(m.index + m[0].length, matches[index + 1]?.index ?? tailStart),
   ] }));
-  return [...prefix, { type: 'element', tagName: 'ul', properties: { className: ['mobile-enumeration'] }, children: items }, ...(tailStart < text.length ? [slice(tailStart,text.length)] : [])];
+  const ordered = (options.orderedEnumerationWhen ?? []).some(when => text.includes(when));
+  return [...prefix, { type: 'element', tagName: ordered ? 'ol' : 'ul', properties: { className: ['mobile-enumeration'] }, children: items }, ...(tailStart < text.length ? [slice(tailStart,text.length)] : [])];
 }
 
 export default function rehypeMobileReadability(options = {}) {
@@ -272,15 +273,16 @@ export default function rehypeMobileReadability(options = {}) {
       }
       tree.children.splice(i, end - i, { type: 'element', tagName: 'ul', properties: { className: ['mobile-enumeration'] }, children: group.map((p) => ({ type: 'element', tagName: 'li', properties: {}, children: [p] })) });
     }
-    const walk = (node, excluded = false) => {
+    const walk = (node, excluded = false, inQuote = false) => {
+      inQuote = inQuote || node.tagName === 'blockquote';
       if (!node.children) return;
       const skip = excluded || ['table', 'pre', 'code', 'figure', 'figcaption', 'h1', 'h2', 'h3', 'h4'].includes(node.tagName);
       node.children = node.children.flatMap((child) => {
         if (!skip && child.type === 'element' && child.tagName === 'p') {
-          const enumerated = enumerateParagraph(child, options);
+          const enumerated = inQuote || /^\s*["“‘]/.test(textOf(child)) ? null : enumerateParagraph(child, options);
           if (enumerated) return enumerated.flatMap((part) => {
             if (part.tagName === 'p') return splitParagraph(part);
-            walk(part, skip); return [part];
+            walk(part, skip, inQuote); return [part];
           });
           return splitParagraph(child);
         }
@@ -289,7 +291,7 @@ export default function rehypeMobileReadability(options = {}) {
           const parts = splitParagraph({ type: 'element', tagName: 'p', properties: {}, children: child.children });
           if (parts.length > 1 || parts[0].properties?.['data-mobile-inline-sentences'] !== undefined) return [{ ...child, children: parts }];
         }
-        walk(child, skip);
+        walk(child, skip, inQuote);
         return [child];
       });
     };
