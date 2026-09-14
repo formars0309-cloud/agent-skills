@@ -145,8 +145,24 @@ function enumerateParagraph(node, options = {}) {
   return [...prefix, { type: 'element', tagName: ordered ? 'ol' : 'ul', properties: { className: ['mobile-enumeration'] }, children: items }, ...(tailStart < text.length ? [slice(tailStart,text.length)] : [])];
 }
 
+export function appliesToArticle(slug, pubDate, scope) {
+  if (!scope) return true;
+  const id = String(slug ?? '').split('/').at(-1).replace(/\.mdx?$/, '');
+  if ((scope.slugs ?? []).includes(id)) return true;
+  const date = pubDate ? new Date(pubDate) : null;
+  return Boolean(date && !Number.isNaN(date.valueOf()) && scope.since && date >= new Date(scope.since));
+}
+
+// 요약도 본문과 같은 겹괄호 보호와 한국어 조사 보정을 재사용한다.
+export function explainKoreanAbbreviations(value, glossary) {
+  const tree = {type:'root',children:[{type:'element',tagName:'p',properties:{},children:[{type:'text',value}]}]};
+  rehypeMobileReadability({glossary, glossaryOnly:true})(tree);
+  return textOf(tree);
+}
+
 export default function rehypeMobileReadability(options = {}) {
-  return (tree) => {
+  return (tree, file) => {
+    if (options.scope && !appliesToArticle(file?.path, file?.data?.astro?.frontmatter?.pubDate, options.scope)) return;
     const definitionSeen = new Set();
     const containsTable = node => node.tagName === 'table' || (node.children ?? []).some(containsTable);
     tree.children = (tree.children ?? []).flatMap(node => {
@@ -207,6 +223,7 @@ export default function rehypeMobileReadability(options = {}) {
       });
     };
     prepare(tree);
+    if (options.glossaryOnly) return;
     const emphasize = node => {
       if (['a', 'table', 'pre', 'code', 'figure', 'figcaption'].includes(node.tagName)) return;
       const raw = textOf(node);

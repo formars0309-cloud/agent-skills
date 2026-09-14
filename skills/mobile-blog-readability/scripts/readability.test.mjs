@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import transform, { splitKoreanSentences } from '../assets/rehype-mobile-readability.mjs';
+import transform, { splitKoreanSentences, appliesToArticle, explainKoreanAbbreviations } from '../assets/rehype-mobile-readability.mjs';
 
 test('소수점·날짜·약어·URL과 문장 인용을 보존한다', () => {
   assert.deepEqual(splitKoreanSentences('Dr. Kim은 2.5mg을 썼다.[2] 다음이다.'), ['Dr. Kim은 2.5mg을 썼다.[2]', '다음이다.']);
@@ -227,4 +227,21 @@ test('확인한 단계 절차는 ol로 순서를 전달한다', () => {
   const tree={type:'root',children:[el('p',[text('세 단계입니다. 첫째, 신청합니다. 둘째, 조사합니다. 셋째, 판정합니다.')])]};
   transform({orderedEnumerationWhen:['세 단계입니다.']})(tree);
   assert.equal(tree.children.find(n=>n.tagName==='ol').children.length,3);
+});
+
+test('명시한 최근 글과 기준일 이후 글에만 내용 변환을 적용한다', () => {
+  const scope={slugs:['selected'],since:'2026-09-14'};
+  assert.equal(appliesToArticle('/guides/selected.md','2026-09-08',scope),true);
+  assert.equal(appliesToArticle('/guides/old.md','2026-09-08',scope),false);
+  assert.equal(appliesToArticle('/guides/new.md','2026-09-14',scope),true);
+  const tree={type:'root',children:[el('p',[text('첫 문장입니다. 다음 문장입니다.')])]};
+  const original=structuredClone(tree);
+  transform({scope})(tree,{path:'/guides/old.md',data:{astro:{frontmatter:{pubDate:'2026-09-08'}}}});
+  assert.deepEqual(tree,original);
+});
+test('요약의 풀이도 조사와 이미 설명한 괄호를 보존한다', () => {
+  const glossary={'2WD':'이륜구동(2WD)','4WD':'사륜구동(4WD)'};
+  assert.equal(explainKoreanAbbreviations('2WD는 기준이다.',glossary),'이륜구동(2WD)은 기준이다.');
+  assert.equal(explainKoreanAbbreviations('이륜구동(2WD)은 기준이다.',glossary),'이륜구동(2WD)은 기준이다.');
+  assert.equal(explainKoreanAbbreviations('선택(4WD)이다.',glossary),'선택(사륜구동 4WD)이다.');
 });

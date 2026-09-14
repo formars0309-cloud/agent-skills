@@ -61,3 +61,7 @@ Astro 표시기 정본은 `assets/rehype-mobile-readability.mjs`다. `python3 sc
 - [W3C: 짧은 문단·명료한 소제목·목록](https://www.w3.org/WAI/tips/writing/)
 - [W3C: 문단과 목록의 의미 구조](https://www.w3.org/WAI/tutorials/page-structure/content/)
 - 현자 2026-09-14 비교: Claude·Codex·Antigravity 응답. Grok은 402 잔액 소진으로 실패. 의견 중 본문 16px 축소, 소제목 프리셋 강제, Enter 한 번으로 여백 보장, 마침표 정규식만으로 분리는 채택하지 않았다.
+
+## 내용 변환의 적용 범위
+
+기존 글 개정은 프로젝트의 `mobile-readability-scope.mjs`에 대상 slug와 신규 적용 시작일을 명시한다. 본문 변환과 요약 풀이 모두 같은 범위를 따른다. 목록·약어·제목 변경을 대상 밖의 과거 글에 자동 적용하지 않는다. 본문 크기와 줄 간격 CSS는 사이트 공통 규칙이다. 요약 약어는 `explainKoreanAbbreviations`로 본문과 같은 조사 보정·기존 풀이 보호를 재사용한다.
