@@ -110,7 +110,7 @@ function enumerateCommaParagraph(node, options = {}) {
     if (depth !== 0 || ranges.length !== commaRule.count) throw new Error(`확인된 쉼표 목록 항목 수가 다릅니다: ${commaRule.when}`);
     const slice = (a, b) => inlineSlice(node, a, b, {offset: 0});
     // 원문의 쉼표·그리고·종결어미까지 보존하고 표시 구조만 바꾼다.
-    return [...(start ? [slice(0, start)] : []), {type:'element',tagName:'ul',properties:{className:['mobile-enumeration'],'data-mobile-comma-list':''},children:ranges.map(([a,b])=>({type:'element',tagName:'li',properties:{},children:[slice(a,b)]}))}, ...(end < text.length ? [slice(end,text.length)] : [])];
+    return [...(text.slice(0, start).trim() ? [slice(0, start)] : []), {type:'element',tagName:'ul',properties:{className:['mobile-enumeration'],'data-mobile-comma-list':''},children:ranges.map(([a,b])=>({type:'element',tagName:'li',properties:{},children:[slice(a,b)]}))}, ...(text.slice(end).trim() ? [slice(end,text.length)] : [])];
   }
   return null;
 }

@@ -91,7 +91,8 @@ test('검토된 긴 쉼표 목록은 괄호 안 쉼표와 수치·연결어를 �
   const list=tree.children.find(n=>n.tagName==='ul');
   assert.equal(list.children.length,3);
   assert.equal(flatten(list.children[1]).trim(),'약물 수(5가지 이내, 5~9가지),');
-  assert.equal(flatten(tree),raw);
+  // 공백뿐인 블록 제거 후에도 모든 글자·수치·기호는 같다.
+  assert.equal(flatten(tree).replace(/\s/g,''),raw.replace(/\s/g,''));
   assert.equal(tree.children.at(-1).tagName,'p');
   assert.throws(()=>transform({commaLists:[{...rule,count:4}]} )({type:'root',children:[el('p',[text(raw)])]}),/항목 수/);
 });
@@ -203,4 +204,12 @@ test('한 문단 안의 첫째·둘째는 설명을 각 항목에 붙인 채 번
   assert.equal(list.children.length, 2);
   assert.equal(flatten(list.children[0]).trim(), '대상이다. 예외도 있다.');
   assert.equal(flatten(list.children[1]).trim(), '비용이다. 조건이 있다.');
+});
+
+test('쉼표 목록 주변의 공백만 있는 문단을 만들지 않는다', () => {
+  const tree={type:'root',children:[el('p',[text('  항목 A, 항목 B입니다.  ')])]};
+  transform({commaLists:[{when:'항목 A',from:'항목 A',to:'항목 B입니다.',count:2}]})(tree);
+  assert.equal(tree.children.length,1);
+  assert.equal(tree.children[0].tagName,'ul');
+  assert.equal(tree.children[0].children.length,2);
 });
