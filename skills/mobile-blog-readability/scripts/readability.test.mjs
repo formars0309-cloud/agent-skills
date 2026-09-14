@@ -245,3 +245,10 @@ test('요약의 풀이도 조사와 이미 설명한 괄호를 보존한다', ()
   assert.equal(explainKoreanAbbreviations('이륜구동(2WD)은 기준이다.',glossary),'이륜구동(2WD)은 기준이다.');
   assert.equal(explainKoreanAbbreviations('선택(4WD)이다.',glossary),'선택(사륜구동 4WD)이다.');
 });
+
+test('핵심 요약에서 풀이한 약어를 본문 흐름 중간에 다시 설명하지 않는다', () => {
+  const tree={type:'root',children:[el('p',[text('2WD 기준 회수 기간이다. 다음 계산이다.')])]};
+  transform({summaryGlossary:{'2WD':'이륜구동(2WD)'},definitions:{'2WD':'2WD의 설명이다.'}})(tree,{data:{astro:{frontmatter:{quickAnswer:'2WD 기준이다.'}}}});
+  assert.equal(tree.children.some(n=>n.properties?.['data-mobile-definition']),false);
+  assert.equal(tree.children.length,2);
+});

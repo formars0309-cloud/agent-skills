@@ -323,7 +323,11 @@ export default function rehypeMobileReadability(options = {}) {
     };
     commaWalk(tree);
     // 설명은 첫 등장 문장 바로 뒤에 둔다. 표 도입문과 표 사이는 떼지 않는다.
-    const extraSeen = new Set();
+    const summary = file?.data?.astro?.frontmatter?.quickAnswer ?? '';
+    const extraSeen = new Set(Object.keys(options.summaryGlossary ?? {}).filter(abbr => {
+      const escaped = abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp('(?<![A-Za-z0-9])' + escaped + '(?![A-Za-z0-9])').test(summary);
+    }));
     tree.children = (tree.children ?? []).flatMap(node => {
       if (['h1','h2','h3','h4','pre','code'].includes(node.tagName)) return [node];
       const raw = textOf(node); const notes = [];
