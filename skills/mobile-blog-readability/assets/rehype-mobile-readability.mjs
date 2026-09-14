@@ -98,7 +98,14 @@ function enumerateParagraph(node, options = {}) {
     return { ...node, children: node.children.map((child) => inlineSlice(child, start, end, state)).filter(Boolean) };
   };
   const prefix = matches[0].index > 0 ? [slice(0, matches[0].index)] : [];
-  const tailStart = Math.min(text.length, ...(options.enumerationEndBefore ?? []).map(prefix => text.indexOf(prefix, matches.at(-1).index)).filter(i => i >= 0));
+  const normalizeQuotes = value => value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  const tailStart = Math.min(text.length, ...(options.enumerationEndBefore ?? []).map(entry => {
+    const rule = typeof entry === 'string' ? {before: entry} : entry;
+    if (rule.when && !normalizeQuotes(text).includes(normalizeQuotes(rule.when))) return -1;
+    const index = normalizeQuotes(text).indexOf(normalizeQuotes(rule.before), matches.at(-1).index);
+    if (rule.when && index < 0) throw new Error(`확인된 목록 요약 경계를 찾지 못했습니다: ${rule.when}`);
+    return index;
+  }).filter(i => i >= 0));
   const items = matches.map((m, index) => ({ type: 'element', tagName: 'li', properties: {}, children: [
     slice(m.index + m[0].length, matches[index + 1]?.index ?? tailStart),
   ] }));

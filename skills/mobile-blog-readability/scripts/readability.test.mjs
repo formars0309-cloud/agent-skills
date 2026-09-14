@@ -40,6 +40,13 @@ test('검토된 요약 경계는 마지막 목록 밖에 유지한다', () => {
   assert.equal(tree.children[1].tagName,'ul');
   assert.deepEqual(tree.children[1].children.map(n => flatten(n).trim()),['대상입니다.','비용입니다.']);
   assert.equal(flatten(tree.children[2]),'요약하면 둘 다 확인합니다.');
+  const curly={type:'root',children:[el('p',[text('첫째, 대상입니다. 둘째, 비용입니다. 조사표에 “잘 보여야 한다”는 기준은 없습니다. 다시 확인합니다.')])]};
+  transform({enumerationEndBefore:['조사표에 "잘 보여야 한다"는 기준은 없습니다.']})(curly);
+  assert.equal(curly.children[0].tagName,'ul');
+  assert.match(flatten(curly.children[1]),/^조사표에 “잘 보여야 한다”/);
+  assert.doesNotMatch(flatten(curly.children[0]),/조사표/);
+  const missing={type:'root',children:[el('p',[text('확인할 둘입니다. 첫째, 대상입니다. 둘째, 비용입니다.')])]};
+  assert.throws(()=>transform({enumerationEndBefore:[{when:'확인할 둘입니다.',before:'요약하면'}]})(missing),/요약 경계/);
 });
 
 test('문장 분리 후 가시 텍스트와 링크 목적지·강조·목록 항목 수를 유지한다', () => {
