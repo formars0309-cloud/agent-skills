@@ -29,6 +29,91 @@ test('약어 풀이 뒤 조사를 맞추고 서지 목록을 본문 목록과 �
   assert.deepEqual(tree.children.at(-1).properties.className,['mobile-bibliography']);
 });
 
+test('공식 링크 제목은 보존하고 겹괄호와 조사·문장부호를 처리한다', () => {
+  const tree={type:'root',children:[el('p',[el('a',[text('TS 공식 문서')],{href:'/official'}),text(' TS와, ISG로. 검사(MMSE, GDS)를 확인합니다.')])]};
+  transform({glossary:{TS:'한국교통안전공단(TS)',ISG:'공회전 제한 시스템(ISG)',MMSE:'간이정신진단검사(MMSE)',GDS:'전반적 퇴화척도(GDS)'}})(tree);
+  assert.equal(tree.children[0].children[0].children[0].value,'TS 공식 문서');
+  assert.match(flatten(tree),/공단\(TS\)과,/);
+  assert.match(flatten(tree),/시스템\(ISG\)으로\./);
+  assert.match(flatten(tree),/검사\(간이정신진단검사 MMSE, 전반적 퇴화척도 GDS\)/);
+});
+
+test('강조 노드를 가로지르는 괄호의 약어도 겹괄호 없이 푼다', () => {
+  const tree={type:'root',children:[el('p',[text('검사('),el('strong',[text('MMSE')]),text(', GDS)를 확인합니다.')])]};
+  transform({glossary:{MMSE:'간이정신진단검사(MMSE)',GDS:'전반적 퇴화척도(GDS)'}})(tree);
+  assert.equal(flatten(tree),'검사(간이정신진단검사 MMSE, 전반적 퇴화척도 GDS)를 확인합니다.');
+});
+
+test('표에서 처음 만나는 약어는 표를 보존한 채 바로 뒤에서 설명한다', () => {
+  const table=el('table',[el('tr',[el('td',[text('GTL 20인치')]),el('td',[text('TS')])])]);
+  const original=JSON.stringify(table);
+  const tree={type:'root',children:[table,el('p',[text('GTL을 비교합니다. TS를 확인합니다.')])]};
+  transform({glossary:{TS:'한국교통안전공단(TS)'},definitions:{GTL:'GTL은 GT-Line 트림을 줄여 쓴 표기입니다.'}})(tree);
+  assert.equal(JSON.stringify(table),original);
+  assert.equal(tree.children.filter(n=>n.properties?.['data-mobile-definition']==='GTL').length,1);
+  assert.match(flatten(tree),/용어: 한국교통안전공단\(TS\)/);
+});
+
+test('별표 강조 복원은 승인한 문구에만 적용하고 코드 문자는 보존한다', () => {
+  const tree={type:'root',children:[el('p',[text('**15%**와 **그대로**'),el('code',[text('**15%**')])])]};
+  transform({boldRepairs:['15%']})(tree);
+  assert.equal(tree.children[0].children[0].tagName,'strong');
+  assert.match(flatten(tree),/\*\*그대로\*\*/);
+  assert.equal(flatten(tree.children[0].children.at(-1)),'**15%**');
+});
+
+test('검토된 묶음 이름과 명사형 머리말을 글자 그대로 강조한다', () => {
+  const tree={type:'root',children:[el('p',[text('조사 당일\n5. 확인합니다.\n6. 살펴봅니다.')]),el('p',[text('실구매가. 가격을 확인합니다.')])]};
+  transform({emphasizeParagraphs:['조사 당일'],labelPrefixes:['실구매가.']})(tree);
+  assert.equal(tree.children[0].children[0].tagName,'strong');
+  assert.equal(tree.children.at(-1).children[0].tagName,'strong');
+  assert.match(flatten(tree.children.at(-1)),/실구매가\. 가격/);
+});
+
+test('도입 뒤 첫째와 다음 문단 둘째를 묶되 각각의 예외를 보존한다', () => {
+  const tree={type:'root',children:[el('p',[text('주의할 점이 둘 있습니다. 첫째, 적용되지 않습니다. 첫 항목의 예외입니다.')]),text('\n'),el('p',[text('둘째, 다른 조건입니다. 둘째 항목의 예외입니다.')]),el('p',[text('공단은 별도로 확인합니다.')])]};
+  transform()(tree);
+  assert.equal(flatten(tree.children[0]).trim(),'주의할 점이 둘 있습니다.');
+  const list=tree.children.find(n=>n.tagName==='ul');
+  assert.equal(list.children.length,2);
+  assert.match(flatten(list.children[0]),/첫 항목의 예외입니다/);
+  assert.match(flatten(list.children[1]),/둘째 항목의 예외입니다/);
+  assert.equal(list.children[0].children.length,2);
+  assert.equal(tree.children.at(-1).tagName,'p');
+  assert.match(flatten(tree.children.at(-1)),/공단은 별도로/);
+});
+
+test('검토된 긴 쉼표 목록은 괄호 안 쉼표와 수치·연결어를 보존한다', () => {
+  const raw='적는 항목입니다. 병력, 약물 수(5가지 이내, 5~9가지), 그리고 특기사항입니다. 총괄 설명입니다.';
+  const tree={type:'root',children:[el('p',[text(raw)])]};
+  const rule={when:'병력',from:'병력',to:'특기사항입니다.',count:3};
+  transform({commaLists:[rule]})(tree);
+  const list=tree.children.find(n=>n.tagName==='ul');
+  assert.equal(list.children.length,3);
+  assert.equal(flatten(list.children[1]).trim(),'약물 수(5가지 이내, 5~9가지),');
+  assert.equal(flatten(tree),raw);
+  assert.equal(tree.children.at(-1).tagName,'p');
+  assert.throws(()=>transform({commaLists:[{...rule,count:4}]} )({type:'root',children:[el('p',[text(raw)])]}),/항목 수/);
+});
+
+test('서수 절차와 그 뒤 보호자 할 일 목록을 독립적으로 유지한다', () => {
+  const raw='절차입니다. 첫째, 신청합니다. 둘째, 판정합니다. 보호자가 할 일입니다. 준비를 정하고, 상태를 전달하고, 청구하는 것입니다.';
+  const tree={type:'root',children:[el('p',[text(raw)])]};
+  transform({enumerationEndBefore:[{when:'절차입니다.',before:'보호자가 할 일입니다.'}],commaLists:[{when:'준비를 정하고',from:'준비를 정하고',to:'청구하는 것입니다.',count:3}]})(tree);
+  const lists=tree.children.filter(n=>n.tagName==='ul');
+  assert.deepEqual(lists.map(n=>n.children.length),[2,3]);
+  assert.equal(flatten(tree).replace(/\s/g,''),raw.replace(/(?:첫째|둘째),\s*/g,'').replace(/\s/g,''));
+});
+
+test('풀이를 첫 등장 문장 옆에 놓고 표 도입문과 표를 붙여 둔다', () => {
+  const tree={type:'root',children:[el('p',[text('2WD를 봅니다. 다음 설명입니다.')]),el('p',[text('아래 표는 LPG를 비교합니다.')]),el('table',[])]};
+  transform({definitions:{'2WD':'2WD 설명입니다.',LPG:'LPG 설명입니다.'}})(tree);
+  assert.equal(flatten(tree.children[1]),'2WD 설명입니다.');
+  const t=tree.children.findIndex(n=>n.tagName==='table');
+  assert.equal(flatten(tree.children[t-1]),'아래 표는 LPG를 비교합니다.');
+  assert.equal(flatten(tree.children[t-2]),'LPG 설명입니다.');
+});
+
 test('문장 끝의 여러 출처 링크를 묶고 연속 번호 줄을 목록으로 복원한다', () => {
   const cited={type:'root',children:[el('p',[text('조건입니다. '),el('a',[text('근거 A')],{href:'/a'}),text(', '),el('a',[text('근거 B')],{href:'/b'})])]};
   transform()(cited);

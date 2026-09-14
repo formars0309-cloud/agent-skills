@@ -91,6 +91,30 @@ function splitParagraph(node) {
   return parts;
 }
 
+function enumerateCommaParagraph(node, options = {}) {
+  const text = textOf(node);
+  const commaRule = (options.commaLists ?? []).find(rule => text.includes(rule.when));
+  if (commaRule) {
+    const start = text.indexOf(commaRule.from);
+    const last = text.indexOf(commaRule.to, start);
+    if (start < 0 || last < start) throw new Error(`확인된 쉼표 목록 경계를 찾지 못했습니다: ${commaRule.when}`);
+    const end = last + commaRule.to.length;
+    const ranges = []; let depth = 0; let cursor = start;
+    for (let i = start; i < end; i++) {
+      if ('([{'.includes(text[i])) depth++;
+      else if (')]}'.includes(text[i])) depth--;
+      else if (text[i] === ',' && depth === 0) { ranges.push([cursor, i + 1]); cursor = i + 1; }
+      if (depth < 0) throw new Error('쉼표 목록의 괄호가 맞지 않습니다');
+    }
+    ranges.push([cursor, end]);
+    if (depth !== 0 || ranges.length !== commaRule.count) throw new Error(`확인된 쉼표 목록 항목 수가 다릅니다: ${commaRule.when}`);
+    const slice = (a, b) => inlineSlice(node, a, b, {offset: 0});
+    // 원문의 쉼표·그리고·종결어미까지 보존하고 표시 구조만 바꾼다.
+    return [...(start ? [slice(0, start)] : []), {type:'element',tagName:'ul',properties:{className:['mobile-enumeration'],'data-mobile-comma-list':''},children:ranges.map(([a,b])=>({type:'element',tagName:'li',properties:{},children:[slice(a,b)]}))}, ...(end < text.length ? [slice(end,text.length)] : [])];
+  }
+  return null;
+}
+
 function enumerateParagraph(node, options = {}) {
   const text = textOf(node);
   // Markdown이 문단으로 남긴 연속 번호 줄을 실제 목록으로 복원한다.
@@ -122,33 +146,57 @@ function enumerateParagraph(node, options = {}) {
 
 export default function rehypeMobileReadability(options = {}) {
   return (tree) => {
+    const definitionSeen = new Set();
+    const containsTable = node => node.tagName === 'table' || (node.children ?? []).some(containsTable);
+    tree.children = (tree.children ?? []).flatMap(node => {
+      if (['h1','h2','h3','h4','pre','code'].includes(node.tagName)) return [node];
+      const raw = textOf(node); const notes = [];
+      for (const [abbr, full] of Object.entries(options.glossary ?? {})) {
+        const pattern = new RegExp('(?<![A-Za-z0-9])' + abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![A-Za-z0-9])');
+        if (definitionSeen.has(abbr) || !pattern.test(raw)) continue;
+        definitionSeen.add(abbr);
+        if (containsTable(node)) notes.push({type:'element',tagName:'p',properties:{'data-mobile-definition':abbr},children:[{type:'text',value:`용어: ${full}`}]});
+      }
+      return [node, ...notes];
+    });
     const expanded = new Set();
-    const prepare = (node, excluded = false) => {
-      const skip = excluded || ['pre', 'code', 'table', 'h1', 'h2', 'h3', 'h4'].includes(node.tagName);
-      if (!node.children || skip) return;
+    const depthAfter = (value, initial) => [...value].reduce((n,c)=>c==='('?n+1:c===')'?Math.max(0,n-1):n,initial);
+    const prepare = (node, excluded = false, inheritedDepth = {value:0}) => {
+      const depthState = ['p','li'].includes(node.tagName) ? {value:0} : inheritedDepth;
+      const skip = excluded || ['a', 'pre', 'code', 'table', 'h1', 'h2', 'h3', 'h4'].includes(node.tagName);
+      if (!node.children || skip) { depthState.value=depthAfter(textOf(node),depthState.value); return; }
       node.children = node.children.flatMap((child) => {
-        if (child.type !== 'text') { prepare(child, skip); return [child]; }
+        if (child.type !== 'text') { prepare(child, skip, depthState); return [child]; }
         let value = child.value;
         for (const [abbr, full] of Object.entries(options.glossary ?? {})) {
-          if (value.includes(full)) expanded.add(abbr);
+          const plainFull = full.replace(/\(([^()]*)\)$/, ' $1');
+          if (value.includes(full) || value.includes(plainFull)) expanded.add(abbr);
           const escaped = abbr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const pattern = new RegExp('(?<![A-Za-z])' + escaped + '(?![A-Za-z])');
-          if (!expanded.has(abbr) && pattern.test(value)) {
-            value = value.replace(pattern, full);
+          const pattern = new RegExp('(?<![A-Za-z0-9])' + escaped + '(?![A-Za-z0-9])');
+          const match = value.match(pattern);
+          if (!expanded.has(abbr) && match) {
+            const before = value.slice(0, match.index);
+            const depth = depthAfter(before, depthState.value);
+            const display = depth > 0 ? plainFull : full;
+            const after = value.slice(match.index + abbr.length);
+            const particle = after.match(/^(으로|로|은|는|이|가|을|를|와|과)(?=\s|[.,!?;:)\]”’]|$)/)?.[0] ?? '';
+            let corrected = particle;
             // 한국어 풀이의 끝말에 맞춰 조사만 보정한다(예: 시스템(ISG)이).
             const korean = full.replace(/\([^)]*\)$/, '').match(/[가-힣](?=[^가-힣]*$)/)?.[0];
             if (korean) {
-              const batchim = (korean.charCodeAt(0) - 0xac00) % 28 !== 0;
-              const escapedFull = full.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              value = value.replace(new RegExp(escapedFull + '(은|는|이|가|을|를)(?=\\s)'), (_, particle) =>
-                full + ({은: batchim ? '은' : '는', 는: batchim ? '은' : '는', 이: batchim ? '이' : '가', 가: batchim ? '이' : '가', 을: batchim ? '을' : '를', 를: batchim ? '을' : '를'}[particle]));
+              const jong = (korean.charCodeAt(0) - 0xac00) % 28;
+              const batchim = jong !== 0;
+              corrected = ({은: batchim ? '은' : '는', 는: batchim ? '은' : '는', 이: batchim ? '이' : '가', 가: batchim ? '이' : '가', 을: batchim ? '을' : '를', 를: batchim ? '을' : '를', 와: batchim ? '과' : '와', 과: batchim ? '과' : '와', 로: jong === 0 || jong === 8 ? '로' : '으로', 으로: jong === 0 || jong === 8 ? '로' : '으로'}[particle]) ?? particle;
             }
+            value = before + display + corrected + after.slice(particle.length);
             expanded.add(abbr);
           }
         }
+        depthState.value=depthAfter(child.value,depthState.value);
         const parts = []; let cursor = 0;
         // Markdown 파서가 한국어 조사 앞 강조를 문자로 남긴 경우만 복원한다.
         for (const match of value.matchAll(/\*\*([^*\n]+)\*\*/g)) {
+          if (!(options.boldRepairs ?? []).includes(match[1])) continue;
           parts.push({ type: 'text', value: value.slice(cursor, match.index) });
           parts.push({ type: 'element', tagName: 'strong', properties: {}, children: [{ type: 'text', value: match[1] }] });
           cursor = match.index + match[0].length;
@@ -158,6 +206,24 @@ export default function rehypeMobileReadability(options = {}) {
       });
     };
     prepare(tree);
+    const emphasize = node => {
+      if (['a', 'table', 'pre', 'code', 'figure', 'figcaption'].includes(node.tagName)) return;
+      const raw = textOf(node);
+      if (node.tagName === 'p' && (options.emphasizeParagraphs ?? []).includes(raw.trim()) && node.children?.[0]?.tagName !== 'strong') {
+        node.children = [{type:'element',tagName:'strong',properties:{},children:node.children}];
+      }
+      if (node.tagName === 'p' || (node.tagName === 'li' && node.children?.every(c=>c.type==='text'||['strong','em','a','span'].includes(c.tagName)))) {
+        const prefix = (options.labelPrefixes ?? []).find(p=>raw.trimStart().startsWith(p));
+        if (prefix && node.children?.find(c=>c.type!=='text'||c.value.trim())?.tagName !== 'strong') {
+          const end = raw.length - raw.trimStart().length + prefix.length;
+          const head = inlineSlice(node,0,end,{offset:0});
+          const tail = inlineSlice(node,end,raw.length,{offset:0});
+          node.children = [{type:'element',tagName:'strong',properties:{},children:head.children},...(tail?.children??[])];
+        }
+      }
+      for (const child of node.children ?? []) emphasize(child);
+    };
+    emphasize(tree);
     // 출처 절의 서지 목록은 본문 확인 목록과 구분해 원래의 조밀한 형식을 유지한다.
     let bibliography = false;
     for (const node of tree.children ?? []) {
@@ -171,6 +237,20 @@ export default function rehypeMobileReadability(options = {}) {
     }
     // 기존 글에서 명시적으로 나열한 첫째·둘째 문단과 지정한 항목 절만 목록으로 묶는다.
     const ordinal = /^(첫째|둘째|셋째|넷째|다섯째|여섯째),\s*/;
+    // 도입 문장 뒤 첫째가 있고 둘째가 다음 문단이면 도입만 먼저 떼어 낸다.
+    // 항목의 뒤 설명·예외는 쪼개지 않고 기존 문단 묶음에 그대로 넘긴다.
+    tree.children = (tree.children ?? []).flatMap((node, index, siblings) => {
+      if (node.tagName !== 'p') return [node];
+      const raw = textOf(node);
+      const markers = [...raw.matchAll(/(?:^|\s)(첫째|둘째|셋째|넷째|다섯째|여섯째),\s*/g)];
+      const first = markers[0];
+      const next = siblings.slice(index + 1).find(n => n.type !== 'text' || n.value.trim());
+      if (markers.length !== 1 || first[1] !== '첫째' || first.index === 0 || next?.tagName !== 'p' || !/^둘째,\s*/.test(textOf(next))) return [node];
+      const start = first.index + first[0].indexOf('첫째');
+      const prefix = raw.slice(0, start).trim();
+      if (!/[.!?][”’"')\]]*$/.test(prefix)) return [node];
+      return [inlineSlice(node, 0, start, {offset: 0}), inlineSlice(node, start, raw.length, {offset: 0})];
+    });
     let section = '';
     for (let i = 0; i < (tree.children ?? []).length; i++) {
       const node = tree.children[i];
@@ -214,5 +294,28 @@ export default function rehypeMobileReadability(options = {}) {
       });
     };
     walk(tree);
+    // 문장과 서수 목록을 먼저 정리한 뒤 독립된 긴 나열 문장만 목록으로 바꾼다.
+    const commaWalk = node => {
+      if (!node.children || ['table','pre','code','figure','figcaption'].includes(node.tagName)) return;
+      node.children = node.children.flatMap(child => {
+        if (child.tagName === 'p') return enumerateCommaParagraph(child, options) ?? [child];
+        commaWalk(child); return [child];
+      });
+    };
+    commaWalk(tree);
+    // 설명은 첫 등장 문장 바로 뒤에 둔다. 표 도입문과 표 사이는 떼지 않는다.
+    const extraSeen = new Set();
+    tree.children = (tree.children ?? []).flatMap(node => {
+      if (['h1','h2','h3','h4','pre','code'].includes(node.tagName)) return [node];
+      const raw = textOf(node); const notes = [];
+      for (const [abbr, definition] of Object.entries(options.definitions ?? {})) {
+        const escaped=abbr.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        if (extraSeen.has(abbr) || !new RegExp('(?<![A-Za-z0-9])'+escaped+'(?![A-Za-z0-9])').test(raw)) continue;
+        extraSeen.add(abbr);
+        notes.push({type:'element',tagName:'p',properties:{'data-mobile-definition':abbr},children:[{type:'text',value:definition}]});
+      }
+      return /^(?:아래|다음) 표/.test(raw.trim()) ? [...notes,node] : [node,...notes];
+    });
+    emphasize(tree);
   };
 }
