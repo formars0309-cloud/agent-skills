@@ -17,6 +17,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | [`fact-integrity`](skills/fact-integrity) | Compares a source text with its derivative (summary, polish, platform port) to catch dropped or altered numbers and lost qualifiers. |
 | [`humanize-korean`](skills/humanize-korean) | Rewrites AI-written Korean so it reads as human prose without touching content; `codex/humanize-korean` is the Codex entry document sharing the same references. |
 | [`suno`](skills/suno) | Aside로 Suno에서 게임 배경음·효과음·환경음을 기획·생성·검수·다운로드한다. |
+| [`codex-imagegen`](skills/codex-imagegen) | Claude Code처럼 이미지 생성 도구가 없는 세션에서 `codex exec`로 Codex 내장 image_gen을 불러 그림을 생성·편집한다. API 키 없이 Codex 로그인 인증을 쓴다. Claude 경로에만 연결한다(Codex는 내장 스킬 사용). |
 | 현자 | Moved to its own repo, [formars0309-cloud/hyunja](https://github.com/formars0309-cloud/hyunja), on 2026-09-07 so it can be shared on its own. |
 
 ## Install on another machine
