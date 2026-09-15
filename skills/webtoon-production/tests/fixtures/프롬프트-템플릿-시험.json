@@ -1,0 +1,58 @@
+{
+  "project": "여신을 짝사랑한 마왕의 하루",
+  "note": "컷 프롬프트의 공통 블록. 컷 고유 내용(cast·setting·prompt·dialogue)은 회차 관리 파일의 panels에 둔다. tools/panel.py가 둘을 합쳐 프롬프트와 참조 목록을 만든다.",
+  "style": "Use case: illustration-story. Style: same as the reference finished panel — clean Korean webtoon illustration, soft painterly shading, natural skin tone, thin black panel border with white margin outside. Output exactly ONE square panel (1024x1024), one moment, no grid or strips.",
+  "request_prefix": "Primary request (panel {id} of a Korean fantasy romantic comedy webtoon): ",
+  "characters": {
+    "마왕": {
+      "name_en": "the king",
+      "description": "the Demon King: adult man, tall slim elegant build (NOT bulky, natural head-to-body balance), black swept-back hair with one front lock, a pair of black horns curving backward, pointed ears, sharp red eyes, high-collared long black coat with deep crimson lining, black gloves, black tie. No blush.",
+      "sheet": "이미지/마왕-정면측면-표정시트-v02.png",
+      "sheet_note": "character sheet of the Demon King (face, horns, hair, coat reference ONLY; do NOT copy the sheet's bulky torso, blush or heavy frown)."
+    },
+    "세렌": {
+      "name_en": "Seren",
+      "description": "Seren the goddess: adult woman, warm blonde hair in a loose low tie, sage-green eyes, ONE thin golden halo, cream knit cardigan over a white top, sky-blue wide pants, slippers. No blush unless stated.",
+      "sheet": "이미지/여신-정면측면-표정시트-v01.png",
+      "sheet_note": "character sheet of Seren (face, hair, halo, outfit reference ONLY, not pose)."
+    }
+  },
+  "style_reference": {
+    "path": "원고/2화-v05/업로드/01.jpg",
+    "note": "a finished panel of this series (art style, line quality, color, thin black panel border, Korean caption box and lettering style reference ONLY; do not copy its subject)."
+  },
+  "settings": {
+    "공용 정원": "the shared garden — pale stone columns, flowering vines, a stone bench and a round stone table, soft daylight (as in the reference panel).",
+    "신전 기도실": "the temple prayer hall — bright airy stone interior, tall pale columns, high vaulted ceiling with soft daylight, cream and white stone, tiny golden prayer orbs floating like fireflies, a plain wooden desk. No other people.",
+    "신전에서 정원 가는 길": "a garden path at sunset between the temple and the shared garden, warm orange sky."
+  },
+  "lettering": "Lettering: Korean text verbatim in the same font style as the reference panel.",
+  "bubbles": {
+    "자막": "in a small rectangular caption box in the top-left corner",
+    "효과음": "as bold sound-effect lettering, slightly tilted, no bubble",
+    "생각": "in a tailless, dotted-outline thought bubble near {who}",
+    "대사": "in a white speech bubble with a tail pointing to {who}"
+  },
+  "speakers": {
+    "마왕 목소리": "in a black rounded speech box with WHITE letters and a small crimson wax seal on its edge, coming from the black prayer mass",
+    "신탁": "written along a flowing golden ribbon of light in dark letters",
+    "쪽지": "written on a small floating ink-black note as white letters"
+  },
+  "no_text": "Text: none. No letters, no bubbles, no captions anywhere in the image.",
+  "constraints": "Constraints: every character keeps the reference identity and adult look; hands with correct finger count and left/right; halo is one thin ring; black magic is matte black/charcoal (never red or purple).",
+  "avoid": "Avoid: multiple panels, English text, watermark, extra characters, chibi, purple/grey skin, extra borders, red magic. Only the text listed above.",
+  "edit_prefix": "Edit Image 1 only as instructed below. Keep everything else identical: composition, character identity, clothing, lettering, bubbles and their positions, panel border.",
+  "generation": {
+    "size": "1024x1024",
+    "aspect": "1:1",
+    "jpg_width": 690,
+    "timeout": 900,
+    "draft_backend": "grok",
+    "final_backend": "codex",
+    "jobs": {
+      "grok": 2,
+      "codex": 2
+    },
+    "note": "jobs는 2026-09-15 병렬 실측(이미지/병렬시험-20260915/실측기록.md) 기준. 2개 동시는 단독과 같은 속도였고 3개 이상은 측정하지 않았다."
+  }
+}

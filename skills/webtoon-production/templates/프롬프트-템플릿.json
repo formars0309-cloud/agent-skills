@@ -1,0 +1,46 @@
+{
+  "project": "{작품 이름}",
+  "note": "컷 프롬프트의 공통 블록. 컷 고유 내용(cast·setting·prompt·dialogue)은 회차 관리 파일의 panels에 둔다. {…} 자리는 작품에 맞게 채운다. 채워지지 않은 항목이 있으면 panel.py가 참조 파일 없음 등으로 멈춘다.",
+  "style": "Use case: illustration-story. Style: clean Korean webtoon illustration, {작품 그림체 한 줄}. Output exactly ONE square panel (1024x1024), one moment, no grid or strips.",
+  "request_prefix": "Primary request (panel {id} of a Korean fantasy romantic comedy webtoon): ",
+  "characters": {
+    "{인물 이름}": {
+      "name_en": "{대사 지시에 쓸 영문 호칭}",
+      "description": "{영문 고정 외형 서술}",
+      "sheet": "{저장소 상대 경로의 시트 이미지}",
+      "sheet_note": "character sheet of ... (face, hair, outfit reference ONLY, not pose)."
+    }
+  },
+  "style_reference": {
+    "path": "{화풍·레터링 기준이 되는 완성 컷, 없으면 이 항목을 지운다}",
+    "note": "a finished panel of this series (art style, line quality, color, panel border, Korean lettering style reference ONLY; do not copy its subject)."
+  },
+  "settings": {
+    "{장소 이름}": "{영문 배경 서술}"
+  },
+  "lettering": "Lettering: Korean text verbatim in the same font style as the reference panel.",
+  "bubbles": {
+    "자막": "in a small rectangular caption box in the top-left corner",
+    "효과음": "as bold sound-effect lettering, slightly tilted, no bubble",
+    "생각": "in a tailless, dotted-outline thought bubble near {who}",
+    "대사": "in a white speech bubble with a tail pointing to {who}"
+  },
+  "speakers": {},
+  "no_text": "Text: none. No letters, no bubbles, no captions anywhere in the image.",
+  "constraints": "Constraints: every character keeps the reference identity and adult look; hands with correct finger count and left/right; halo is one thin ring; black magic is matte black/charcoal (never red or purple).",
+  "avoid": "Avoid: multiple panels, English text, watermark, extra characters, chibi, purple/grey skin, extra borders, red magic. Only the text listed above.",
+  "edit_prefix": "Edit Image 1 only as instructed below. Keep everything else identical: composition, character identity, clothing, lettering, bubbles and their positions, panel border.",
+  "generation": {
+    "size": "1024x1024",
+    "aspect": "1:1",
+    "jpg_width": 690,
+    "timeout": 900,
+    "draft_backend": "grok",
+    "final_backend": "codex",
+    "jobs": {
+      "grok": 2,
+      "codex": 2
+    },
+    "note": "jobs는 2026-09-15 병렬 실측(이미지/병렬시험-20260915/실측기록.md) 기준. 2개 동시는 단독과 같은 속도였고 3개 이상은 측정하지 않았다."
+  }
+}
