@@ -9,11 +9,11 @@ API 키가 필요 없고, 각 CLI의 로그인 인증(ChatGPT 구독·grok.com �
   grok          Grok CLI 내장 image_gen / image_edit(xAI Imagine). 결과 JPG. 편집·참조는 절대 경로로 전달.
 
 사용 예:
-  생성:  codex_imagegen.py --prompt "..." --out 결과.png
-  편집:  codex_imagegen.py --edit 원본.png --prompt "change only X; keep Y" --out 결과.png
-  참조:  codex_imagegen.py --ref 캐릭터시트.png --prompt "..." --out 결과.png
-  Grok:  codex_imagegen.py --backend grok --aspect 2:3 --prompt "..." --out 결과.jpg
-  납품:  codex_imagegen.py ... --jpg-width 690        # 결과 옆에 690px JPG도 만든다
+  생성:  imagegen_cli.py --prompt "..." --out 결과.png
+  편집:  imagegen_cli.py --edit 원본.png --prompt "change only X; keep Y" --out 결과.png
+  참조:  imagegen_cli.py --ref 캐릭터시트.png --prompt "..." --out 결과.png
+  Grok:  imagegen_cli.py --backend grok --aspect 2:3 --prompt "..." --out 결과.jpg
+  납품:  imagegen_cli.py ... --jpg-width 690        # 결과 옆에 690px JPG도 만든다
 
 출력: 마지막 줄에 JSON 한 줄(결과 경로·크기·바이트·SHA256·소요 시간·토큰).
 """
