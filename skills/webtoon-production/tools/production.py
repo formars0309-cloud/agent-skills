@@ -56,6 +56,41 @@ def required(value, label):
         raise ValueError(f'{label}: 내용을 입력하세요.')
 
 
+STORY_FIELDS = ('canon', 'start_state', 'knowledge', 'end_state',
+                'foreshadowing', 'authority', 'review_note')
+
+
+def init_story(root, data):
+    """선별 도입 작품의 신규 회차에만 서사 기록을 추가한다. 구회차는 이식하지 않는다."""
+    policy_file = root / 'production/story-policy.json'
+    if not policy_file.exists():
+        return
+    policy = read(policy_file)
+    if policy.get('version') != 1 or type(policy.get('from_episode')) is not int or policy['from_episode'] < 1:
+        raise ValueError('story-policy.json의 version=1 및 양의 from_episode가 필요합니다.')
+    if data['episode'] < policy['from_episode']:
+        return
+    guide = policy.get('guide')
+    if not path(root, guide).is_file():
+        raise ValueError('작품별 서사 안내 파일이 없습니다.')
+    data['brief']['story'] = dict.fromkeys(STORY_FIELDS, '')
+    if guide not in data['references']:
+        data['references'].append(guide)
+    data['schedule']['story_metrics'] = dict.fromkeys(
+        ['post_script_changed_panels', 'generation_calls_per_adopted_panel',
+         'resume_minutes', 'documentation_minutes', 'redundant_approval_questions'], None)
+
+
+def validate_story(brief):
+    # 이 필드가 없는 기존 파일의 해시·검수 조건은 그대로 둔다.
+    if 'story' not in brief:
+        return
+    if not isinstance(brief['story'], dict):
+        raise ValueError('brief.story는 서사 기록 객체여야 합니다.')
+    for key in STORY_FIELDS:
+        required(brief['story'].get(key), f'brief.story.{key}')
+
+
 def validate(data, config):
     if data['schema'] != 1 or data['project'] != config['project']:
         raise ValueError('다른 작품 또는 지원하지 않는 회차 형식입니다.')
@@ -77,6 +112,7 @@ def fingerprint(root, data, config, target):
     brief = data['brief']
     for key in ('premise', 'turn', 'ending', 'research_note'):
         required(brief[key], key)
+    validate_story(brief)
     base = {'project': data['project'], 'episode': data['episode'], 'brief': brief,
             'references': hashes(root, data['references']), 'rules': config}
     if target == 'brief':
@@ -153,6 +189,12 @@ def report(root, data, config, stage):
     result = {'project': data['project'], 'episode': data['episode'], 'stage': stage,
               'pending': pending, 'ready': not pending,
               'schedule': data['schedule'], 'publication': '공개 발행 권한과 별개'}
+    if 'story' in data['brief']:
+        try:
+            validate_story(data['brief'])
+            result['story_record'] = '필수 기록 있음. 의미·승인·재미는 검수자가 확인해야 함'
+        except ValueError as error:
+            result['story_record'] = str(error)
     if not pending and stage == 'delivery':
         result['bytes'] = delivery(root, data, config)
     return result
@@ -199,6 +241,7 @@ def main():
                 'schedule': {'deadline': '', 'buffer_episodes': None, 'work_budget_hours': None,
                              'rest_plan': '', 'note': '목표를 정하기 전에는 수치를 추정해 채우지 않는다.'},
                 'panels': panels, 'reviews': []}
+        init_story(ROOT, data)
         validate(data, config)
         create(manifest, data)
         print(f'생성: {args.manifest} (미검수 초안)')

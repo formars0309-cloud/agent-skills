@@ -105,6 +105,58 @@ class WorkflowTests(unittest.TestCase):
         self.data['schedule']['deadline'] = '2026-10-01'
         self.assertTrue(p.report(self.root, self.data, self.config, 'delivery')['ready'])
 
+    def test_story_policy_does_not_change_existing_reviews(self):
+        self.ready()
+        before = p.fingerprint(self.root, self.data, self.config, '01')
+        (self.root / 'production').mkdir()
+        p.create(self.root / 'production/story-policy.json',
+                 {'version': 1, 'from_episode': 1, 'guide': '서사.md'})
+        (self.root / '서사.md').write_text('신규 회차 안내')
+        self.assertEqual(before, p.fingerprint(self.root, self.data, self.config, '01'))
+        self.assertTrue(p.report(self.root, self.data, self.config, 'delivery')['ready'])
+
+    def test_new_story_record_blocks_review_until_filled_and_detects_change(self):
+        self.data['brief']['story'] = dict.fromkeys(p.STORY_FIELDS, '')
+        with self.assertRaises(ValueError):
+            self.accept('brief')
+        self.assertIn('brief.story.canon', p.report(self.root, self.data, self.config, 'brief')['story_record'])
+        self.data['brief']['story'] = dict.fromkeys(p.STORY_FIELDS, '검토 근거')
+        self.ready()
+        self.data['schedule']['story_metrics'] = {'documentation_minutes': 5}
+        self.assertTrue(p.report(self.root, self.data, self.config, 'delivery')['ready'])
+        self.data['brief']['story']['knowledge'] = '독자만 알고 인물은 모르는 정보로 수정'
+        self.assertEqual(p.report(self.root, self.data, self.config, 'production')['pending'],
+                         ['brief', 'storyboard', '01', '02'])
+
+    def test_story_init_applies_only_from_configured_episode(self):
+        (self.root / 'production').mkdir()
+        config = copy.deepcopy(self.config)
+        config['references'] = ['기준.md']
+        p.create(self.root / 'production/project.json', config)
+        p.create(self.root / 'production/story-policy.json',
+                 {'version': 1, 'from_episode': 4, 'guide': '서사.md'})
+        (self.root / '서사.md').write_text('작품 예외')
+        for episode in [3, 4]:
+            result = subprocess.run([sys.executable, str(BASE / 'tools/production.py'),
+                '--root', str(self.root), 'init', f'production/{episode}.json',
+                '--episode', str(episode)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = p.read(self.root / f'production/{episode}.json')
+            self.assertEqual('story' in data['brief'], episode == 4)
+            self.assertEqual('서사.md' in data['references'], episode == 4)
+            self.assertEqual(data['reviews'], [])
+        self.assertEqual(p.read(self.root / 'production/project.json'), config)
+
+    def test_story_guide_escape_and_bad_record_rejected(self):
+        (self.root / 'production').mkdir()
+        p.create(self.root / 'production/story-policy.json',
+                 {'version': 1, 'from_episode': 1, 'guide': '../외부.md'})
+        with self.assertRaises(ValueError):
+            p.init_story(self.root, self.data)
+        self.data['brief']['story'] = '형식 오류'
+        with self.assertRaises(ValueError):
+            self.accept('brief')
+
     def test_refuse_overwrite(self):
         target = self.root / '기준.md'
         with self.assertRaises(FileExistsError):

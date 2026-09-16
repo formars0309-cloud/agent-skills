@@ -17,6 +17,10 @@ description: 웹툰 회차 제작 파이프라인 도구. 기획·콘티 관리 
 | `templates/` | 새 작품용 project.json·프롬프트 템플릿 |
 | `tests/` | `python3 -m unittest discover -s tests -p 'test_p*.py' -v` |
 
+## 정본·서사 선별 적용
+
+작품에 `production/story-policy.json`이 있으면 기획·콘티·회차 재개 시 [공용 서사 규칙](references/story-continuity.md)과 작품의 `production/서사관리.md`를 읽는다. 신규 지정 회차의 `init`에 최소 서사 기록을 추가하며, 기존 승인·검수 파일은 소급 변경하지 않는다. 기존 AGENTS→README 경로로도 같은 규칙에 도달한다.
+
 ## 사용
 
 1. 작품 저장소 루트(`production/project.json`이 있는 곳)나 그 아래에서 실행한다. 다른 곳에서는 `--root <루트>` 또는 `WEBTOON_ROOT`.

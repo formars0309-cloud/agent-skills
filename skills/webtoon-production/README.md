@@ -2,6 +2,12 @@
 
 작가의 작업 방식을 이 저장소의 실행 가능한 제작 절차로 옮겼다. 원고 생성·공개 발행 도구가 아니라 **기획 → 콘티 → 컷별 제작·검수 → 납품 검증**의 진행 상태와 변경 영향을 확인하는 CLI다. Python 3.10 이상을 사용한다.
 
+## 정본·서사·연속성 — 선별 적용
+
+작품 루트의 `production/story-policy.json`이 있으면 작업 시작 시 `production/서사관리.md`와 `production/서사규칙.md`를 읽는다. 공용 원본은 스킬의 `references/story-continuity.md`다. 기존 상태 문서·설정·직전 원고를 확인하고 신규 지정 회차의 `brief.story` 7개 항목을 채운다. `check/review`는 공백과 변경을 검사하며 내용의 타당성은 실제 검수로 확인한다. 기존 관리 파일에는 새 필드를 소급 요구하지 않는다. 작품별 지시·작업 범위와 기존 시각·납품 검사를 유지한다.
+
+`story-policy.json` 예: `{"version": 1, "from_episode": 4, "guide": "production/서사관리.md"}`. 이 파일은 신규 init에만 사용하며 작품 승인·공개 허가를 의미하지 않는다. 구회차 references에 들어 있는 AGENTS.md/project.json을 적용 목적만으로 수정하지 않는다.
+
 ## 근거와 적용 범위
 
 - 하일권의 장면에서 시작하는 구상·회차 말미의 궁금증을 `premise`, `turn`, `ending`으로 옮겼다. [에듀코카](https://edu.kocca.kr/edu/bbs/B0000023/view.do?menuNo=500206&nttId=74993&pageIndex=6)
