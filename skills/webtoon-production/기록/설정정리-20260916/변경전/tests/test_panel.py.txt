@@ -57,25 +57,6 @@ class PanelTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.assemble(self.root, self.data, '01', self.template, self.dir)
 
-    def test_post_lettering_does_not_draw_dialogue_and_keeps_validation(self):
-        self.template['lettering_mode'] = 'post'
-        self.template['lettering'] = 'Leave space for separate lettering.'
-        before = json.dumps(self.data, ensure_ascii=False)
-        prompt, refs = m.assemble(self.root, self.data, '01', self.template, self.dir)
-        self.assertNotIn('Text (verbatim)', prompt)
-        self.assertNotIn('차를 가져올까?', prompt)
-        self.assertIn(self.template['no_text'], prompt)
-        self.assertEqual(len(refs), 3)
-        self.assertEqual(json.dumps(self.data, ensure_ascii=False), before)
-        self.data['panels'][0]['dialogue'] = ['용사: 안녕']
-        with self.assertRaises(ValueError):
-            m.assemble(self.root, self.data, '01', self.template, self.dir)
-
-    def test_unknown_lettering_mode_fails(self):
-        self.template['lettering_mode'] = 'typo'
-        with self.assertRaises(ValueError):
-            m.assemble(self.root, self.data, '01', self.template, self.dir)
-
     def test_panel_reference_requires_adoption(self):
         with self.assertRaises(ValueError):
             m.assemble(self.root, self.data, '02', self.template, self.dir)

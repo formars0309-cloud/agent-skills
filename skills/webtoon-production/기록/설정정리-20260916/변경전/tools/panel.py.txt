@@ -144,18 +144,10 @@ def assemble(root, data, panel_id, template, dirpath, stage='final'):
     lines.append(template['request_prefix'].format(id=panel_id) + panel['prompt'].strip())
     lines.append('Characters: ' + ' '.join(template['characters'][c]['description'] for c in panel['cast']))
     lines.append('Scene: ' + setting_of(panel, template))
-    lettering_mode = template.get('lettering_mode', 'embedded')
-    if lettering_mode not in ('embedded', 'post'):
-        raise ValueError(f'지원하지 않는 식자 방식: {lettering_mode}')
-    # 후식자도 화자 검증은 유지하되 원화에 문자를 그리는 지시는 전달하지 않는다.
-    dialogue_lines = [line_of(entry, panel, template) for entry in panel['dialogue']]
-    if lettering_mode == 'post':
-        lines.append(template['no_text'])
-        lines.append(template['lettering'])
-    elif dialogue_lines:
+    if panel['dialogue']:
         lines.append(template['lettering'])
         lines.append('Text (verbatim):')
-        lines += dialogue_lines
+        lines += [line_of(entry, panel, template) for entry in panel['dialogue']]
     else:
         lines.append(template['no_text'])
     lines.append(template['constraints'])
