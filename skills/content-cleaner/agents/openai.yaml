@@ -1,0 +1,4 @@
+interface:
+  display_name: "청소기"
+  short_description: "콘텐츠 중간 산출물과 중복 파일을 근거에 따라 정리하고 공간 확보"
+  default_prompt: "$content-cleaner로 전체 콘텐츠 프로젝트의 불필요한 중간 산출물을 조사하고, 안전한 항목을 정리한 뒤 확보 용량과 보류 항목을 알려줘."
