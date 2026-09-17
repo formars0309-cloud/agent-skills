@@ -18,6 +18,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | [`humanize-korean`](skills/humanize-korean) | Rewrites AI-written Korean so it reads as human prose without touching content; `codex/humanize-korean` is the Codex entry document sharing the same references. |
 | [`suno`](skills/suno) | Aside로 Suno에서 게임 배경음·효과음·환경음을 기획·생성·검수·다운로드한다. |
 | [`imagegen-cli`](skills/imagegen-cli) | Claude Code처럼 이미지 생성 도구가 없는 세션에서 구독 로그인된 CLI(Codex `image_gen`, Grok `image_gen`/`image_edit`)를 비대화형으로 불러 그림을 생성·편집한다. API 키 없음. Claude 경로에만 연결한다. |
+| [`naver-mate`](skills/naver-mate) | 네이버 메이트 공식 기준과 채널 진단을 바탕으로 콘텐츠 전략·30일 실험·월별 인용 성과 평가를 만든다. |
 | 현자 | Moved to its own repo, [formars0309-cloud/hyunja](https://github.com/formars0309-cloud/hyunja), on 2026-09-07 so it can be shared on its own. |
 
 ## Install on another machine
