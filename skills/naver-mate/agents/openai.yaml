@@ -1,4 +1,4 @@
 interface:
   display_name: "네이버 메이트"
-  short_description: "공식 기준과 채널 진단으로 메이트 선정 전략과 인용 성과를 관리합니다"
-  default_prompt: "$naver-mate로 내 채널의 네이버 메이트 선정 전략과 측정 계획을 만들어줘."
+  short_description: "공식 기준과 GEO로 메이트 전략·인용 정확성·실험 성과를 관리합니다"
+  default_prompt: "$naver-mate로 내 채널의 네이버 메이트 선정 전략과 GEO 개선·측정 계획을 만들어줘."
