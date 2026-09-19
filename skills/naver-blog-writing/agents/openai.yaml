@@ -1,0 +1,4 @@
+interface:
+  display_name: "네이버 블로그 글쓰기"
+  short_description: "프로젝트별 독자와 브랜드에 맞춘 네이버 원고·이미지·저장 검수"
+  default_prompt: "$naver-blog-writing 스킬과 현재 프로젝트의 네이버 프로필을 적용해 글을 작성하고 검수해줘."
