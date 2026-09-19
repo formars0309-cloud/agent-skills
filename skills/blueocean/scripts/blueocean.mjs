@@ -57,9 +57,10 @@
  */
 import { createHmac } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const AD_BASE = 'https://api.searchad.naver.com';
 // 2026 년에 NAVER API HUB 로 이관됐다. 구형 openapi.naver.com + X-Naver-Client-* 는 401 이 난다.
@@ -70,6 +71,35 @@ const AD_THROTTLE = 400; // 더 빠르면 429 가 난다
 const HUB_THROTTLE = 110;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const warnings = [];
+function warn(message) {
+  warnings.push(message);
+  console.error(`[주의] ${message}`);
+}
+
+// 일시적인 통신 오류·호출 제한·서버 오류만 재시도한다. 응답 본문은 비밀 정보 보호를 위해 출력하지 않는다.
+async function requestJson(url, options = {}, { fetchImpl = fetch, wait = sleep } = {}) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let res;
+    try {
+      res = await fetchImpl(url, { ...options, signal: AbortSignal.timeout(30000) });
+    } catch {
+      if (attempt === 2) throw new Error('통신 실패 또는 30초 응답 시간 초과');
+      await wait(500 * 2 ** attempt);
+      continue;
+    }
+    if (res.ok) return res.json();
+    if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+      const retryAfter = res.headers?.get('retry-after');
+      const seconds = Number(retryAfter);
+      const delay = retryAfter && Number.isFinite(seconds) ? seconds * 1000 : 500 * 2 ** attempt;
+      await wait(Math.min(Math.max(delay, 0), 10000));
+      continue;
+    }
+    throw new Error(`HTTP ${res.status}`);
+  }
+}
+
 
 /* ---------------------------------------------------------------- env */
 
@@ -128,9 +158,7 @@ const normalize = (s) => s.replace(/\s+/g, '');
 async function fetchKeywords(hints) {
   const path = '/keywordstool';
   const qs = new URLSearchParams({ hintKeywords: hints.map(normalize).join(','), showDetail: '1' });
-  const res = await fetch(`${AD_BASE}${path}?${qs}`, { headers: adHeaders('GET', path) });
-  if (!res.ok) throw new Error(`검색광고 API ${res.status} — ${(await res.text()).slice(0, 160)}`);
-  const json = await res.json();
+  const json = await requestJson(`${AD_BASE}${path}?${qs}`, { headers: adHeaders('GET', path) });
   return (json.keywordList ?? []).map((k) => ({
     keyword: k.relKeyword,
     pc: toCount(k.monthlyPcQcCnt),
@@ -138,7 +166,7 @@ async function fetchKeywords(hints) {
     volume: toCount(k.monthlyPcQcCnt) + toCount(k.monthlyMobileQcCnt),
     adCompetition: k.compIdx ?? '',
     // 수익 축. 같은 응답에 이미 들어 있으므로 추가 호출이 없다.
-    adDepth: Number(k.plAvgDepth ?? 0),          // 그 검색어에 붙는 광고 슬롯 수. 0 이면 광고주가 없다
+    adDepth: Number(k.plAvgDepth ?? 0),          // 검색광고 깊이. 콘텐츠 광고 수익과는 별개다
     adCtr: Math.round(((Number(k.monthlyAvePcCtr ?? 0) + Number(k.monthlyAveMobileCtr ?? 0)) / 2) * 100) / 100,
   }));
 }
@@ -154,7 +182,7 @@ async function expandSeeds(seeds, onProgress) {
         if (!prev || row.volume > prev.volume) merged.set(row.keyword, row);
       }
     } catch (e) {
-      console.error(`\n[${chunk.join(', ')}] 실패 — ${e.message}`);
+      warn(`수요 조회 [${chunk.join(', ')}] 실패 — ${e.message}`);
     }
     await sleep(AD_THROTTLE);
   }
@@ -171,10 +199,13 @@ const hubHeaders = () => ({
 /** 404 = 그런 검색 종류가 없다. 401 = 콘솔에서 그 API 를 등록하지 않았다. */
 async function searchDocs(kind, query, display = 10) {
   const qs = new URLSearchParams({ query, display: String(display), sort: 'sim' });
-  const res = await fetch(`${HUB_BASE}/search/v1/${kind}?${qs}`, { headers: hubHeaders() });
-  if (!res.ok) return { total: null, items: [], status: res.status };
-  const json = await res.json();
-  return { total: Number(json.total ?? 0), items: json.items ?? [] };
+  try {
+    const json = await requestJson(`${HUB_BASE}/search/v1/${kind}?${qs}`, { headers: hubHeaders() });
+    return { total: Number(json.total ?? 0), items: json.items ?? [] };
+  } catch (e) {
+    warn(`${kind} 검색 [${query}] 실패 — ${e.message}`);
+    return { total: null, items: [], error: e.message };
+  }
 }
 
 /**
@@ -183,15 +214,18 @@ async function searchDocs(kind, query, display = 10) {
  * 정확한 분류가 아니라 '이 검색어의 상위가 광고로 덮여 있는가' 를 보는 거친 지표다.
  */
 const AD_SIGNAL =
-  /병원|의원|한의원|약국|클리닉|센터|원장|대표|상담|문의|예약|견적|카톡|오픈채팅|무료상담|추천업체|업체|대행|공식블로그|체험단|협찬|제공받아/;
+  /무료\s*상담|상담\s*(신청|문의|예약)|예약\s*(문의|접수)|견적\s*(문의|신청)|카톡\s*문의|오픈채팅|추천업체|공식\s*블로그|체험단|협찬|제공받아/;
 const stripTags = (s) => String(s ?? '').replace(/<[^>]*>/g, '');
 
 function commercialRatio(items) {
   if (!items.length) return null;
   let hit = 0;
   for (const it of items) {
-    const blob = [it.bloggername, stripTags(it.title), stripTags(it.description)].join(' ');
-    if (AD_SIGNAL.test(blob)) hit++;
+    const name = stripTags(it.bloggername);
+    const blob = [name, stripTags(it.title), stripTags(it.description)].join(' ');
+    // 본문에 '병원'이 나오는 것과 병원 운영 계정인 것은 구분한다.
+    const businessAccount = /(?:병원|의원|한의원|약국|클리닉)(?:\s*(?:공식|블로그|소식))*$/.test(name.trim());
+    if (businessAccount || AD_SIGNAL.test(blob)) hit++;
   }
   return Math.round((hit / items.length) * 100) / 100;
 }
@@ -216,9 +250,13 @@ function commercialRatio(items) {
  */
 async function fetchRecency(query) {
   const qs = new URLSearchParams({ query, display: '100', sort: 'date' });
-  const res = await fetch(`${HUB_BASE}/search/v1/blog?${qs}`, { headers: hubHeaders() });
-  if (!res.ok) return null;
-  const json = await res.json();
+  let json;
+  try {
+    json = await requestJson(`${HUB_BASE}/search/v1/blog?${qs}`, { headers: hubHeaders() });
+  } catch (e) {
+    warn(`열기 조회 [${query}] 실패 — ${e.message}`);
+    return null;
+  }
   const items = json.items ?? [];
 
   const days = [];
@@ -256,38 +294,57 @@ async function fetchRecency(query) {
  *
  * 경로 주의 — 하이픈이 들어간 search-trend 다. datalab/* 계열은 전부 404 다.
  */
+// 한국 시간 기준 완료된 월만 사용한다. 정확히 12개월 대 12개월을 비교한다.
+function trendWindow(now = new Date()) {
+  const kst = new Date(now.getTime() + 9 * 3600000);
+  const year = kst.getUTCFullYear(), month = kst.getUTCMonth();
+  return {
+    startDate: new Date(Date.UTC(year, month - 24, 1)).toISOString().slice(0, 10),
+    endDate: new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10),
+  };
+}
+
+function summarizeTrend(data, window) {
+  const monthly = [...data].sort((a, b) => a.period.localeCompare(b.period));
+  const first = new Date(window.startDate + 'T00:00:00Z');
+  const expected = Array.from({ length: 24 }, (_, i) =>
+    new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + i, 1)).toISOString().slice(0, 7));
+  const complete = monthly.length === 24 && monthly.every((x, i) =>
+    x.period.slice(0, 7) === expected[i] && Number.isFinite(x.ratio) && x.ratio >= 0);
+  if (!complete) return { monthly, trendComplete: false, yoy: null, peakMonth: null, seasonal: null };
+  const prev = monthly.slice(0, 12).reduce((sum, x) => sum + x.ratio, 0) / 12;
+  const curr = monthly.slice(12).reduce((sum, x) => sum + x.ratio, 0) / 12;
+  const peak = monthly.slice(12).reduce((best, x) => x.ratio > best.ratio ? x : best);
+  return {
+    monthly, trendComplete: true,
+    yoy: prev > 0 ? Math.round(curr / prev * 100) / 100 : null,
+    peakMonth: curr > 0 ? Number(peak.period.slice(5, 7)) : null,
+    seasonal: curr > 0 && peak.ratio / curr > 2,
+  };
+}
+
 async function fetchTrend(keywords) {
-  const end = new Date();
-  end.setMonth(end.getMonth() - 1); // 당월은 집계가 덜 찼다
-  const start = new Date(end);
-  start.setMonth(start.getMonth() - 24);
-  const fmt = (d) => d.toISOString().slice(0, 10);
-  const res = await fetch(`${HUB_BASE}${process.env.NAVER_TREND_PATH || '/search-trend/v1/search'}`, {
-    method: 'POST',
-    headers: { ...hubHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      startDate: fmt(start),
-      endDate: fmt(end),
-      timeUnit: 'month',
-      keywordGroups: keywords.slice(0, 5).map((k) => ({ groupName: k, keywords: [k] })),
-    }),
-  });
-  if (!res.ok) return {};
-  const json = await res.json();
+  const window = trendWindow();
+  let json;
+  try {
+    json = await requestJson(`${HUB_BASE}${process.env.NAVER_TREND_PATH || '/search-trend/v1/search'}`, {
+      method: 'POST',
+      headers: { ...hubHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...window, timeUnit: 'month',
+        keywordGroups: keywords.slice(0, 5).map(k => ({ groupName: k, keywords: [k] })),
+      }),
+    });
+  } catch (e) {
+    warn(`추세 조회 [${keywords.join(', ')}] 실패 — ${e.message}`);
+    return {};
+  }
   const out = {};
   for (const g of json.results ?? []) {
-    const d = g.data ?? [];
-    if (d.length < 18) continue; // 전년 대비를 내려면 최소 1년 반은 있어야 한다
-    const cut = d.length - 12;
-    const prev = d.slice(0, cut).reduce((a, x) => a + x.ratio, 0) / cut;
-    const curr = d.slice(cut).reduce((a, x) => a + x.ratio, 0) / 12;
-    const peak = d.slice(cut).reduce((b, x) => (x.ratio > b.ratio ? x : b), d[cut]);
-    out[g.title] = {
-      yoy: prev > 0 ? Math.round((curr / prev) * 100) / 100 : null,
-      peakMonth: Number(peak.period.slice(5, 7)),
-      // 최고점이 평균의 2배를 넘으면 계절 키워드로 본다. 발행 시점이 중요해진다.
-      seasonal: curr > 0 && peak.ratio / curr > 2,
-    };
+    out[g.title] = { ...summarizeTrend(g.data ?? [], window), trendWindow: window };
+    if (!out[g.title].trendComplete) warn(`추세 [${g.title}] 월별 데이터 불완전 — 전년 대비 계산 생략`);
+  }
+  for (const keyword of keywords) {
+    if (!out[keyword]) warn(`추세 [${keyword}] 응답 누락`);
   }
   return out;
 }
@@ -304,7 +361,7 @@ function grade(saturation) {
 }
 
 /**
- * 기회점수 — 이 키워드로 글을 썼을 때 한 달에 몇 명이 올 것인가.
+ * 기회점수 — 트래픽 기회의 상대 비교 점수. 실제 방문자 예측값이 아니다.
  *
  * 실질포화도는 '빈 자리인가'만 답한다. 수요 10에 글 0편이면 포화 0 으로 1위가 되지만
  * 그 글은 월 10회 노출된다. 반대로 수요 4,000에 포화 0.2 인 키워드가 진짜 자리다.
@@ -472,6 +529,7 @@ async function main() {
       mobile: t.mobile,
       blogDocs: blog.total,
       newsDocs: news.total,
+      measurementErrors: [blog.error && `블로그: ${blog.error}`, news.error && `뉴스: ${news.error}`].filter(Boolean),
       saturation: sat,
       commercialRatio: com,
       effectiveSaturation: eff,
@@ -518,13 +576,14 @@ async function main() {
     for (const r of ranked) {
       const t = trend[r.keyword];
       if (!t) continue;
-      r.yoy = t.yoy;
-      r.peakMonth = t.peakMonth;
-      r.seasonal = t.seasonal;
+      Object.assign(r, t);
     }
   }
 
-  const payload = { generatedAt: new Date().toISOString(), seeds: opt.seeds, rows: ranked };
+  const unmeasured = rows.filter(r => r.effectiveSaturation === null);
+  if (unmeasured.length) warn(`측정 불가 ${unmeasured.length}개 — JSON의 unmeasured에 보존`);
+  const payload = { generatedAt: new Date().toISOString(), seeds: opt.seeds, exact: opt.exact,
+    measuredCount: ranked.length, unmeasured, warnings, rows: ranked };
   await writeFile(opt.out, JSON.stringify(payload, null, 1), 'utf8');
 
   if (opt.json) {
@@ -590,8 +649,8 @@ function printRevenue(list, peakOf) {
     );
   });
   console.log('='.repeat(116));
-  console.log('광고깊이 = 그 검색어에 붙는 광고 슬롯 수(0~15). 0 이면 광고주가 없다 = 애드포스트 수익도 없다.');
-  console.log('광고CTR  = 광고 클릭률 평균(%). 0.00 이면 아무도 그 검색에서 광고를 안 누른다.');
+  console.log('광고깊이 = 그 검색어에 붙는 광고 슬롯 수(0~15). 검색광고 지표이며 애드포스트 수익을 직접 측정하지 않는다.');
+  console.log('광고CTR  = 광고 클릭률 평균(%). 반올림된 참고 지표이며 수익점수 계산에는 사용하지 않는다.');
   console.log('단가배율 = 경쟁도 × (0.15 + 광고깊이/10). 키워드 사이의 상대 배율이지 실제 CPC 가 아니다.');
   console.log('수익점수 = 기회점수 × 단가배율. 이 순서로 정렬했다.');
   console.log('등급     = A 블루오션(<3) · B 양호(<10) · C 경쟁(<40) · D 레드오션');
@@ -630,7 +689,12 @@ function printHot(list, peakOf) {
   console.log('등급      = A 블루오션(<3) · B 양호(<10) · C 경쟁(<40) · D 레드오션');
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+export { commercialRatio, effectiveSaturation, grade, opportunityScore, revenueFactor,
+  trendWindow, summarizeTrend, requestJson };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+  main().catch((e) => {
+    console.error(e.message);
+    process.exitCode = 1;
+  });
+}
