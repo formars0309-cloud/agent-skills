@@ -248,6 +248,11 @@ function commercialRatio(items) {
  * 해석은 양날이다. 속도가 빠르면 트래픽이 있다는 뜻이면서 동시에 남들도 달려들고
  * 있다는 뜻이다. 그래서 점수에 넣지 않고 칼럼으로만 보여준다. 판단은 사람이 한다.
  */
+function postAgeDays(postUtcMidnight, now = Date.now()) {
+  const kstToday = Math.floor((now + 9 * 3600000) / 86400000) * 86400000;
+  return Math.max(0, Math.round((kstToday - postUtcMidnight) / 86400000));
+}
+
 async function fetchRecency(query) {
   const qs = new URLSearchParams({ query, display: '100', sort: 'date' });
   let json;
@@ -264,7 +269,7 @@ async function fetchRecency(query) {
     const m = String(it.postdate ?? '').match(/^(\d{4})(\d{2})(\d{2})$/);
     if (!m) continue;
     const d = Date.UTC(+m[1], +m[2] - 1, +m[3]);
-    days.push(Math.floor((Date.now() - d) / 86400000));
+    days.push(postAgeDays(d));
   }
   if (days.length < 2) return null;
   days.sort((a, b) => a - b); // 오래된 정도 오름차순 = 최신이 앞
@@ -690,7 +695,7 @@ function printHot(list, peakOf) {
 }
 
 export { commercialRatio, effectiveSaturation, grade, opportunityScore, revenueFactor,
-  trendWindow, summarizeTrend, requestJson };
+  trendWindow, summarizeTrend, requestJson, postAgeDays };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   main().catch((e) => {

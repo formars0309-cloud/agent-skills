@@ -31,8 +31,7 @@ npx --yes skills add https://github.com/formars0309-cloud/agent-skills \
   --global --agent claude-code -y
 ```
 
-The repo is private, so that machine needs to be authenticated to GitHub first
-(`gh auth login`, or an SSH key with access).
+공개 저장소이므로 코드를 읽고 내려받는 데 GitHub 로그인이 필요하지 않습니다. 블루오션 실측에는 각자의 네이버 API 인증정보가 필요합니다.
 
 Or without the installer — clone and point the agent's skill directory at it:
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { commercialRatio, trendWindow, summarizeTrend, requestJson, effectiveSaturation, grade } from './blueocean.mjs';
+import { commercialRatio, postAgeDays, trendWindow, summarizeTrend, requestJson, effectiveSaturation, grade } from './blueocean.mjs';
 
 test('의료 주제의 일반 경험담과 상업 신호를 구분한다', () => {
   assert.equal(commercialRatio([{ title: '요양병원 입원 준비물', description: '보호자의 경험', bloggername: '가족일기' }]), 0);
@@ -51,4 +51,9 @@ test('인증 오류는 재시도하지 않고 통신 오류는 세 번으로 제
 test('기존 등급 기준을 유지한다', () => {
   assert.equal(effectiveSaturation(10, 0.8), 6);
   assert.equal(grade(6).tier, 'B');
+});
+
+test('한국 날짜 자정 직후 최근 글은 음수가 아닌 0일이다', () => {
+  assert.equal(postAgeDays(Date.UTC(2026, 8, 20), Date.parse('2026-09-19T16:00:00Z')), 0);
+  assert.equal(postAgeDays(Date.UTC(2026, 8, 19), Date.parse('2026-09-19T16:00:00Z')), 1);
 });
