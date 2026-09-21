@@ -107,7 +107,7 @@ def login(blog, e, wait):
     if st["state"] == "ok":
         print(f"{blog}: 이미 로그인됨 ({e['aside_account']})")
         return 0
-    launch_profile(e["profile_dir"])
+    # check()가 프로필 연결 실패 시 창을 이미 열었으므로 여기서는 다시 열지 않는다.
     js = LOGIN_JS.replace("__URL__", LOGIN_URL).replace("__ID__", e["login_id"])
     if st["state"] == "wrong_account":
         # 전용 프로필에 다른 계정이 들어가 있으면 그 프로필에서만 로그아웃한다.
@@ -133,6 +133,7 @@ def login(blog, e, wait):
 
 
 def main():
+    sys.stdout.reconfigure(line_buffering=True)
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
