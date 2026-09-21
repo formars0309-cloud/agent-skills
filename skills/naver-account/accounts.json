@@ -17,8 +17,8 @@
       "aside_account": "u1",
       "profile_dir": "Profile 1",
       "mcp_server": "aside-codori-game",
-      "login_id": "codori_game",
-      "name": "명조 관측소 (게임)",
+      "login_id": "codori-game",
+      "name": "명조 관측소 (게임, 로그인 ID codori-game, 블로그 주소 codori_game)",
       "projects": [
         "/Users/app/orca/projects/애드포스트 정복"
       ]
