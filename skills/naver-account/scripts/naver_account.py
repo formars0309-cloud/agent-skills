@@ -111,7 +111,10 @@ def login(blog, e, wait):
     js = LOGIN_JS.replace("__URL__", LOGIN_URL).replace("__ID__", e["login_id"])
     if st["state"] == "wrong_account":
         # 전용 프로필에 다른 계정이 들어가 있으면 그 프로필에서만 로그아웃한다.
-        js = ("await fetch('https://nid.naver.com/nidlogin.logout', {redirect: 'follow'});\n" + js)
+        # fetch 로그아웃은 세션을 끊지 못한다(2026-09-21 확인). 네이버 첫 화면의 로그아웃 버튼을 누른다.
+        js = ("const naOut = await openTab('https://www.naver.com/');\n"
+              "await naOut.click('#account button:has-text(\"로그아웃\")');\n"
+              "await sleep(3000);\nawait closeTab(naOut);\n" + js)
     _, out = repl(e["aside_account"], js)
     m = re.search(r"NAVER_LOGIN_READY (\{.*\})", out)
     if not m:
