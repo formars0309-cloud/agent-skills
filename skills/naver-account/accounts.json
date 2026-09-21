@@ -8,7 +8,9 @@
       "mcp_server": "aside",
       "login_id": "beacon-now",
       "name": "Beacon Now (Beacon Medi)",
-      "projects": ["/Users/app/orca/projects/Beacon"],
+      "projects": [
+        "/Users/app/orca/projects/Beacon"
+      ],
       "shared_with": "WordPress beaconlab.kr·Google Search Console 작업도 이 프로필에서 한다."
     },
     "codori_game": {
@@ -17,15 +19,19 @@
       "mcp_server": "aside-codori-game",
       "login_id": "codori_game",
       "name": "명조 관측소 (게임)",
-      "projects": ["/Users/app/orca/projects/애드포스트 정복"]
+      "projects": [
+        "/Users/app/orca/projects/애드포스트 정복"
+      ]
     },
-    "demiandew": {
+    "happyturtle1004": {
       "aside_account": "u2",
       "profile_dir": "Profile 2",
       "mcp_server": "aside-demiandew",
       "login_id": "demiandew",
-      "name": "행복한 거북이 유입용 블로그",
-      "projects": ["/Users/app/orca/projects/행복한거북이"]
+      "name": "행복한 거북이 유입용 블로그 (로그인 ID demiandew, 블로그 주소 happyturtle1004)",
+      "projects": [
+        "/Users/app/orca/projects/행복한거북이"
+      ]
     }
   }
 }
