@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "note": "네이버 블로그 ID → Aside 계정(브라우저 프로필) 대응표. 비밀번호·토큰은 넣지 않는다.",
+  "blogs": {
+    "beaconnow": {
+      "aside_account": "u0",
+      "profile_dir": "Default",
+      "mcp_server": "aside",
+      "login_id": "beacon-now",
+      "name": "Beacon Now (Beacon Medi)",
+      "projects": ["/Users/app/orca/projects/Beacon"],
+      "shared_with": "WordPress beaconlab.kr·Google Search Console 작업도 이 프로필에서 한다."
+    },
+    "codori_game": {
+      "aside_account": "u1",
+      "profile_dir": "Profile 1",
+      "mcp_server": "aside-codori-game",
+      "login_id": "codori_game",
+      "name": "명조 관측소 (게임)",
+      "projects": ["/Users/app/orca/projects/애드포스트 정복"]
+    },
+    "demiandew": {
+      "aside_account": "u2",
+      "profile_dir": "Profile 2",
+      "mcp_server": "aside-demiandew",
+      "login_id": "demiandew",
+      "name": "행복한 거북이 유입용 블로그",
+      "projects": ["/Users/app/orca/projects/행복한거북이"]
+    }
+  }
+}
