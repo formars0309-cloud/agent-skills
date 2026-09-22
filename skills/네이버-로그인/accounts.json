@@ -44,6 +44,18 @@
       ],
       "credential_file": "~/.config/gumicatholic/naver-place.env (600, 값은 저장소에 넣지 않음)",
       "verified": "2026-09-22 로그인·새 기기 등록·로그인 상태 유지. MyBlog → blog.naver.com/gumicatholic"
+    },
+    "gumicatholic-long": {
+      "aside_account": "u5",
+      "profile_dir": "Profile 4",
+      "mcp_server": "aside-gumicatholic-long",
+      "login_id": "gumicatholic-long",
+      "name": "구미가톨릭요양원 블로그(gumicatholic-long) · 스마트플레이스(요양원) 관리 계정",
+      "projects": [
+        "/Users/app/orca/projects/Comprehensive Marketing for Long-term Care Hospitals"
+      ],
+      "credential_file": "~/.config/gumicatholic/naver-nursing.env (600)",
+      "verified": "2026-09-22 로그인·로그인 상태 유지. 광고주센터 미가입"
     }
   }
 }
