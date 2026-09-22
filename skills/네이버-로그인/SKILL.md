@@ -16,6 +16,7 @@ description: 네이버 블로그 여러 개를 Aside로 다룰 때 블로그 ID�
 | beaconnow | u0 | Default | `aside` | Beacon Now (WordPress·GSC도 이 프로필) |
 | codori_game (로그인 ID codori-game) | u1 | Profile 1 | `aside-codori-game` | 명조 관측소(게임) |
 | happyturtle1004 (로그인 ID demiandew) | u2 | Profile 2 | `aside-demiandew` | 행복한 거북이 유입용 |
+| gumicatholic | u4 | Profile 3 | `aside-gumicatholic` | 구미가톨릭요양병원 블로그·스마트플레이스(병원·재가센터) |
 
 블로그 주소(블로그 ID)와 로그인 ID가 다를 수 있다. 확인은 블로그 ID로, 로그인 창에는 `login_id`를 넣는다.
 
