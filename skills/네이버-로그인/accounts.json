@@ -32,6 +32,17 @@
       "projects": [
         "/Users/app/orca/projects/행복한거북이"
       ]
+    },
+    "gumicatholic": {
+      "aside_account": "u4",
+      "profile_dir": "Profile 3",
+      "mcp_server": "",
+      "login_id": "(확인 중 — 사용자 전달값으로 로그인 실패, 2026-09-22)",
+      "name": "구미가톨릭요양병원 블로그·스마트플레이스 연결 계정",
+      "projects": [
+        "/Users/app/orca/projects/Comprehensive Marketing for Long-term Care Hospitals"
+      ],
+      "credential_file": "~/.config/gumicatholic/naver-place.env (600, 값은 저장소에 넣지 않음)"
     }
   }
 }
