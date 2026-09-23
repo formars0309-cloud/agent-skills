@@ -53,11 +53,13 @@ description: 네이버 블로그 여러 개를 Aside로 다룰 때 블로그 ID�
 ```bash
 # 사용자가 실제 터미널에서 한 번만 실행한다 (입력은 화면에 표시되지 않는다)
 python3 ~/.claude/skills/네이버-로그인/scripts/naver_account.py save-credential <블로그ID>
+python3 ~/.claude/skills/네이버-로그인/scripts/naver_account.py save-credential all   # 등록된 전부, 빈 값 Enter로 건너뜀
 
 python3 ~/.claude/skills/네이버-로그인/scripts/naver_account.py has-credential all      # 보유 여부만
 python3 ~/.claude/skills/네이버-로그인/scripts/naver_account.py forget-credential <블로그ID>
 ```
 
+- `save-credential all`은 등록된 블로그를 차례로 물어본다. 빈 값으로 Enter하면 그 블로그는 건너뛰고, 이미 저장된 것은 덮어쓸지 물어본다. 두 입력이 다르면 그 블로그만 실패로 남기고 계속 진행한다.
 - `save-credential`은 **TTY에서만** 동작한다. 파이프나 에이전트 세션에서 실행하면 입력이 그대로 기록에 남을 수 있어 거부한다. 에이전트는 이 명령을 대신 실행하지 않고 사용자에게 넘긴다.
 - 키체인에는 UTF-8 바이트를 hex로 인코딩해 저장한다. `security ... -w`가 비ASCII를 hex로 돌려주기 때문에, 우리가 먼저 hex로 넣으면 한글·특수문자·16진수처럼 보이는 비밀번호까지 왕복이 항상 일정하다.
 - 자동 로그인 때 비밀번호는 argv가 아니라 `~/.aside/u/<N>/.naver-pw-<난수>`(0600)로 건네고, REPL이 읽은 즉시 지운다(실패해도 `finally`에서 삭제).

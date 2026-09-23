@@ -11,7 +11,7 @@
   naver_account.py which <블로그ID>
   naver_account.py check <블로그ID>|all [--json] [--expiry]
   naver_account.py login <블로그ID> [--wait 초] [--no-auto]
-  naver_account.py save-credential <블로그ID>     # 실제 터미널에서만. 입력은 화면에 찍히지 않는다
+  naver_account.py save-credential <블로그ID>|all  # 실제 터미널에서만. 입력은 화면에 찍히지 않는다
   naver_account.py has-credential <블로그ID>|all
   naver_account.py forget-credential <블로그ID>
 
@@ -393,28 +393,43 @@ def main():
         print(f"{a.blog}: 키체인 항목 " + ("삭제됨" if kc_del(e["login_id"]) else "없음(변화 없음)"))
         return 0
     if a.cmd == "save-credential":
-        e = entry(blogs, a.blog)
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
             print("거부: 실제 터미널에서만 실행한다. 파이프·에이전트 세션에서는 입력이 "
                   "화면과 기록에 남을 수 있다.", file=sys.stderr)
             print(f"사람이 직접 실행할 명령:\n  python3 {Path(__file__).resolve()} "
                   f"save-credential {a.blog}", file=sys.stderr)
             return 1
-        print(f"{a.blog} (로그인 ID {e['login_id']}) 비밀번호를 macOS 키체인에 저장한다.")
-        print("입력은 화면에 표시되지 않으며 저장소·로그·명령행에 남지 않는다.")
-        pw1 = getpass.getpass("비밀번호: ")
-        pw2 = getpass.getpass("한 번 더: ")
-        if not pw1:
-            print("빈 값이라 저장하지 않았다.", file=sys.stderr); return 1
-        if pw1 != pw2:
-            print("두 입력이 다르다. 저장하지 않았다.", file=sys.stderr); return 1
-        ok, err = kc_set(e["login_id"], pw1)
-        del pw1, pw2
-        if not ok:
-            print(f"키체인 저장 실패: {err}", file=sys.stderr); return 1
-        print(f"저장 완료 (service={KEYCHAIN_SERVICE}, account={e['login_id']}).")
-        print("확인: naver_account.py has-credential " + a.blog)
-        return 0
+        targets = list(blogs) if a.blog == "all" else [a.blog]
+        many = len(targets) > 1
+        if many:
+            print(f"블로그 {len(targets)}개의 비밀번호를 macOS 키체인에 저장한다. "
+                  "건너뛰려면 빈 값으로 Enter.")
+        saved, skipped, failed = [], [], []
+        for b in targets:
+            e = entry(blogs, b)
+            if many and kc_get(e["login_id"]) is not None:
+                print(f"\n[{b}] 이미 저장돼 있다. 덮어쓰려면 새 비밀번호를, 두려면 Enter.")
+            else:
+                print(f"\n[{b}] 로그인 ID {e['login_id']}")
+            print("입력은 화면에 표시되지 않으며 저장소·로그·명령행에 남지 않는다.")
+            pw1 = getpass.getpass("비밀번호: ")
+            if not pw1:
+                print("  건너뜀."); skipped.append(b); continue
+            pw2 = getpass.getpass("한 번 더: ")
+            if pw1 != pw2:
+                print("  두 입력이 다르다. 저장하지 않았다.", file=sys.stderr)
+                failed.append(b); del pw1, pw2; continue
+            ok, err = kc_set(e["login_id"], pw1)
+            del pw1, pw2
+            if not ok:
+                print(f"  키체인 저장 실패: {err}", file=sys.stderr); failed.append(b); continue
+            print(f"  저장 완료 (service={KEYCHAIN_SERVICE}, account={e['login_id']}).")
+            saved.append(b)
+        print(f"\n저장 {len(saved)} / 건너뜀 {len(skipped)} / 실패 {len(failed)}")
+        if failed:
+            print("실패: " + ", ".join(failed), file=sys.stderr)
+        print("확인: naver_account.py has-credential all")
+        return 1 if failed else 0
 
 
 if __name__ == "__main__":
