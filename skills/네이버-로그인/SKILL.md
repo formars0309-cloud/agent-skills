@@ -21,6 +21,8 @@ description: 네이버 블로그 여러 개를 Aside로 다룰 때 블로그 ID�
 
 블로그 주소(블로그 ID)와 로그인 ID가 다를 수 있다. 확인은 블로그 ID로, 로그인 창에는 `login_id`를 넣는다.
 
+`aside account list`에서 u0의 `profiles`가 `Profile 0`으로 보이더라도 이를 크롬의 `--profile-directory` 값으로 해석하지 않는다. 2026-09-23 실측에서 u0가 붙는 실제 크롬 프로필 경로는 `Aside/Default`였다. 계정 슬롯 표시는 `aside repl --account u0`의 라우팅을 따르고, 디스크 프로필 경로는 `chrome://version`의 `프로필 경로`로 판정한다.
+
 ## 작업 순서
 
 1. 대상 블로그 ID를 프로젝트 AGENTS.md나 프로필에서 확인한다. 활성 탭이나 먼저 로그인된 계정으로 추측하지 않는다.
