@@ -201,16 +201,17 @@ console.log('NAVER_LOGIN_READY ' + JSON.stringify(await naPage.evaluate(() => ({
 
 AUTOFILL_JS = r"""
 const naTabs = await listBrowserTabs();
-const naHit = naTabs.find(t => /nid\.naver\.com\/nidlogin/.test(t.url));
+const naHit = naTabs.find(t => /nid\.naver\.com/.test(t.url));
 const naPage = naHit ? await attachBrowserTab(naHit.targetId) : await openTab('__URL__');
-await naPage.waitForSelector('#id', {timeout: 15000});
+// 폼을 반드시 새로 불러온다. 오래 열어 둔 탭을 그대로 쓰면 토큰이 만료돼
+// "이미 처리되었거나 만료된 요청입니다"로 실패한다(2026-09-24 u2에서 실제 발생).
+await naPage.goto('__URL__');
+await naPage.waitForSelector('#id', {timeout: 20000});
+await new Promise(r => setTimeout(r, 1200));
 const naPw = (await fs.readFile('__PWFILE__', 'utf8')).replace(/\n$/, '');
-const naCur = await naPage.evaluate(() => document.querySelector('#id').value);
-if (naCur !== '__ID__') {
-  await naPage.fill('#id', '');
-  await naPage.click('#id');
-  await naPage.keyboard.type('__ID__', {delay: 60});
-}
+await naPage.fill('#id', '');
+await naPage.click('#id');
+await naPage.keyboard.type('__ID__', {delay: 60});
 const naKeep = await naPage.evaluate(() => document.querySelector('#loginStay')?.checked);
 if (naKeep === false) await naPage.locator('label:has-text("로그인 상태 유지")').first().click();
 await naPage.fill('#pw', naPw);
@@ -228,13 +229,23 @@ const naBtn = await naPage.evaluate(() => {
 });
 if (!naBtn) throw new Error('로그인 제출 버튼을 찾지 못했다');
 await naPage.locator('[data-na-submit="1"]').first().click();
-await new Promise(r => setTimeout(r, 7000));
-const naOut = await naPage.evaluate(() => ({
-  url: location.href,
-  err: (document.querySelector('.error_message, #err_common, .error_area')?.innerText || '').trim().slice(0, 160),
-  captcha: !!document.querySelector('#captchaimg, .captcha'),
-  needDevice: /기기 등록|새로운 기기|인증이 필요|2단계|일회용/.test(document.body.innerText),
-}));
+await new Promise(r => setTimeout(r, 8000));
+const naOut = await naPage.evaluate(() => {
+  const txt = document.body.innerText;
+  // 오류 문구는 .form_message.error 에 온다. 필드 래퍼(.form_data.error)의
+  // innerText 는 라벨("아이디 또는 전화번호")이라 오류로 세면 안 된다.
+  const msgs = [...document.querySelectorAll('.form_message.error, .error_message, #err_common, .error_area')]
+    .filter(e => e.getBoundingClientRect().height > 0 && e.innerText.trim())
+    .map(e => e.innerText.trim());
+  return {
+    url: location.href,
+    onLoginPage: !!document.querySelector('#pw'),
+    err: msgs.join(' / ').slice(0, 200),
+    // "일회용 번호 로그인"은 정상 로그인 화면에 항상 있는 링크다. 판정에 쓰지 않는다.
+    captcha: !!document.querySelector('#captchaimg') || /자동입력 방지/.test(txt),
+    needDevice: /새로운 기기|기기 등록|인증번호를 입력|2단계 인증|본인 확인이 필요/.test(txt),
+  };
+});
 console.log('NAVER_AUTOFILL_RESULT ' + JSON.stringify(naOut));
 """
 
@@ -268,6 +279,9 @@ def autofill_login(blog, e, password):
         return {"ok": False, "reason": "device_or_2fa", **r}
     if r.get("err"):
         return {"ok": False, "reason": "login_error", **r}
+    if r.get("onLoginPage"):
+        # 오류 문구를 못 읽었더라도 로그인 화면에 머물러 있으면 실패다
+        return {"ok": False, "reason": "still_on_login_page", **r}
     return {"ok": True, **r}
 
 
