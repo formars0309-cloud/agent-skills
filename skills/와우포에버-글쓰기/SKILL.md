@@ -77,7 +77,7 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 | 긴 구분선 | H2 앞에 `─`(U+2500) 36자 독립 문단, 글자 크기 16. `check_post.py`가 개수 대조 | 절 사이 전체 폭 선(가운데 ✧), CSS로 자동 |
 | 글자 크기 | 본문 19·세부 소제목 24·구분선 16 입력 | 사이트 CSS |
 | 문단 나누기 | 원고에서 한 문단 한 문장 | 원고 기준. 빌드가 긴 문단을 문장 경계로 추가 분할(한국어 110자) |
-| 썸네일 | spec `"theme": "wow"` 합성 이미지, 제목 글자는 고딕 | `design/thumbnails/<slug>.jpg` 3:2, 글자·로고 없는 삽화 + 3개 언어 대체 텍스트 |
+| 썸네일 | spec `"theme": "wow"` 합성 이미지, 제목 글자는 고딕 | `design/thumbnails/<slug>.jpg` 3:2 블리자드 공식 이미지(크롭만) + 3개 언어 대체 텍스트 + 크레딧(`content/thumbnails.json`의 `credit`, 출처 장부 `design/thumbnails/official-sources.json`) |
 | 캡처 이미지 | `spec.json`의 `focused_capture`, `check_post.py`가 원본 픽셀 대조 | 같은 원칙. 전용 검사 도구는 아직 없음 |
 | 표·그래프 | 세로 표 이미지 + 본문에 같은 수치 | `sections[].table`·`figure`, 600px 이하 카드 |
 | 모바일 검사 | `check_mobile.py`, 공개 화면 360/390/430px 캡처 | `validate.mjs`·`test-design.mjs`, 360/390/430px 캡처 |
@@ -87,4 +87,4 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 - 사이트 한국어판은 "한 문단 한 문장"이 아니다. 빌드가 110자에서 나눈다.
   새 사이트 글은 원고부터 한 문단 한 문장으로 쓰고, 기존 글은 개정할 때 맞춘다.
 - 사이트 캡처 이미지에는 원본 픽셀 대조 검사가 없다. 캡처를 넣을 때는 크롭 좌표를 기록한다.
-- 사이트 썸네일은 아직 글자·로고 없는 삽화다. 공식 이미지 우선 규칙(2026-09-24)은 새 사이트 글부터 적용하고 기존 썸네일은 개정할 때 바꾼다.
+- 사이트 썸네일·홈 배경은 2026-09-24 전부 블리자드 공식 이미지로 바꿨다(10장). 썸네일 아래와 홈 배경에 "© Blizzard Entertainment"와 출처 링크를 표시하고, `validate.mjs`가 출처 장부 해시·크레딧 누락을 막는다. 이전 AI 삽화는 `design/thumbnails/archive-ai-v1/`에 보존했다.
