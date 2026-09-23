@@ -214,7 +214,20 @@ if (naCur !== '__ID__') {
 const naKeep = await naPage.evaluate(() => document.querySelector('#loginStay')?.checked);
 if (naKeep === false) await naPage.locator('label:has-text("로그인 상태 유지")').first().click();
 await naPage.fill('#pw', naPw);
-await naPage.locator('button[type="submit"], #log\\.login').first().click();
+// 제출 버튼: 현재 레이아웃은 #loginBtn_row(type=button). 구버전은 #log.login.
+// 패스키(#passkeyBtn_row)는 생체 인증이라 절대 누르지 않는다.
+const naBtn = await naPage.evaluate(() => {
+  const cand = document.querySelector('#loginBtn_row') || document.querySelector('#log\\.login')
+    || [...document.querySelectorAll('button, input[type=submit]')]
+         .find(b => b.id !== 'passkeyBtn_row'
+                 && /^로그인$/.test((b.innerText || b.value || '').trim())
+                 && b.getBoundingClientRect().height > 0);
+  if (!cand) return null;
+  cand.setAttribute('data-na-submit', '1');
+  return cand.id || 'marked';
+});
+if (!naBtn) throw new Error('로그인 제출 버튼을 찾지 못했다');
+await naPage.locator('[data-na-submit="1"]').first().click();
 await new Promise(r => setTimeout(r, 7000));
 const naOut = await naPage.evaluate(() => ({
   url: location.href,
