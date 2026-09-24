@@ -21,8 +21,8 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 
 - **공식 이미지 우선(2026-09-24 사용자 지정):** 썸네일과 본문 이미지는 블리자드 공식 이미지(공식 뉴스·소개 페이지의 스크린샷·키아트)를 먼저 쓴다.
   공식 이미지가 화면의 주인공이 되게 크게 보이고, 흐린 배경으로만 깔고 끝내지 않는다. 도식(표·비교 카드)은 공식 이미지로 보여 줄 수 없는 정보에만 쓴다.
-- 공식 이미지는 크롭·축소와 화면 바깥(또는 가장자리 띠) 문구 합성만 한다. 좌우 반전·색 변경·생성형 AI 재작성은 하지 않는다.
-  원본 속 핵심 요소(진영 문장, 직업 아이콘, 라벨)를 설명 띠나 제목으로 가리지 않는다. 가리면 띠를 빼거나 다른 컷을 쓴다.
+- 공식 이미지는 크롭·축소를 기본으로 한다. 네이버는 화면 바깥(또는 가장자리 띠)에만 문구를 합성할 수 있고, 사이트의 `sections[].image`는 문구를 합성하지 않는다. 좌우 반전·색 변경·생성형 AI 재작성은 둘 다 하지 않는다.
+  네이버 문구는 원본 속 핵심 요소(진영 문장, 직업 아이콘, 라벨)를 가리지 않는다. 가리면 띠를 빼거나 다른 컷을 쓴다.
 - 원본 주소·크기·취득일은 공식 이미지 장부(`SOURCES.json`)에, 글마다 어떤 원본을 어떻게 편집했는지는 `assets/SOURCES.md`에 남긴다.
 - 한 이미지에는 핵심 메시지 하나만 둔다. 본문과 겹치는 장문 부제, 불필요한 워터마크는 뺀다.
 - 고객지원·게임 UI 캡처는 틀에 통째로 축소하지 않는다.
@@ -86,10 +86,10 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 
 - **모든 숫자는 본문 문장에도 적는다.** 표·그래프·단계·요점 상자·캡션에만 있는 수치를 두지 않는다.
 - 사이트는 표·그래프를 **글자가 든 그림 파일로 만들지 않는다.** 빌드가 HTML·SVG로 그려 3개 언어·검색·모바일·숫자 자동 대조를 유지한다.
-- 공식 이미지는 공식 페이지에 실린 것만 쓰고 크롭·축소만 한다. 변형·합성·AI 편집을 하지 않으며 크레딧(© Blizzard Entertainment와 출처)을 단다.
-- 한 글의 본문 이미지는 최대 4장이다(썸네일 제외).
+- 사이트의 `sections[].image`는 공식 페이지에 실린 이미지만 쓰고 크롭·축소·JPEG 변환만 한다. 변형·합성·AI 편집을 하지 않으며 크레딧(© Blizzard Entertainment와 출처)을 단다. 네이버의 문구 합성 범위는 1절을 따른다.
+- 사이트의 `sections[].image`는 한 글에 최대 4장이다(썸네일 제외). 네이버는 일반 글 5~10장(썸네일 포함), 커뮤니티 표 글 1장 예외를 `check_post.py`로 검사하므로 이 4장 상한을 적용하지 않는다.
 - 이미지만으로 사실을 전하지 않는다. 이미지가 보여 주는 사실은 본문 문장에도 있어야 한다.
-- 추론한 값을 시각 요소로 옮길 때는 본문과 같은 "우리 계산" 표기를 유지한다. 미발표 내용은 요점 상자의 미발표 형식(점선 테두리 등)으로 구분한다.
+- 추론한 값을 시각 요소로 옮길 때는 본문과 같은 "우리 계산" 표기를 유지한다. 미발표 내용은 요점 상자의 `kind: "unconfirmed"`(점선 테두리)로 구분한다.
 - 시각 요소를 넣어도 360·390·430px에서 가로 넘침 0, 글자 14px 이상을 지킨다.
 
 ## 7. 채널별 구현 대응표
@@ -102,12 +102,12 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 | 글자 크기 | 본문 19·세부 소제목 24·구분선 16 입력 | 사이트 CSS |
 | 문단 나누기 | 원고에서 한 문단 한 문장 | 원고 기준. 빌드가 긴 문단을 문장 경계로 추가 분할(한국어 110자) |
 | 썸네일 | spec `"theme": "wow"` 합성 이미지, 제목 글자는 고딕 | `design/thumbnails/<slug>.jpg` 3:2 블리자드 공식 이미지(크롭만) + 3개 언어 대체 텍스트 + 크레딧(`content/thumbnails.json`의 `credit`, 출처 장부 `design/thumbnails/official-sources.json`) |
-| 캡처 이미지 | `spec.json`의 `focused_capture`, `check_post.py`가 원본 픽셀 대조 | 같은 원칙. 전용 검사 도구는 아직 없음 |
-| 표·그래프 | 세로 표 이미지 + 본문에 같은 수치 | `sections[].table`·`figure`, 600px 이하 카드 |
-| 막대 그래프 | 아직 없음 — `build_assets.py`의 `rows`(라벨·값 표형 행) 또는 세로 표 이미지로 대체하고 본문에 같은 수치 | `sections[].figure`에 `type: "bars"`(가로 막대 SVG, 선택 `marker`, `stack: true`면 누적 막대). `validate.mjs`가 값과 본문 숫자 대조 |
+| 캡처 이미지 | `spec.json`의 `focused_capture`, `check_post.py`가 `check_image_quality.py`를 통해 원본 픽셀 대조 | 같은 원칙. 전용 검사 도구는 아직 없음 |
+| 표·그래프 | `build_assets.py`의 `rows` 표형 이미지(1200×675) + 본문에 같은 수치. 승인된 커뮤니티 표 글만 1200×1600 세로 표 예외 | `sections[].table`(모바일 600px 이하에서 카드)·`sections[].figure`(SVG) |
+| 막대 그래프 | 전용 형식 없음 — `build_assets.py`의 `rows`(라벨·값 표형 행) 이미지로 대체하고 본문에 같은 수치 | `sections[].figure`에 `type: "bars"`(가로 막대 SVG, 선택 `marker`, `stack: true`면 누적 막대). `validate.mjs`가 값과 본문 숫자 대조 |
 | 단계 흐름 | 본문에 `① ②` 문단 + 필요하면 `build_assets.py`의 `cards`(가로 카드 2~4개) 이미지 | `sections[].steps`(번호 원 + 라벨 + 설명 세로 카드, 넓은 화면은 가로 흐름, 3~6단계) |
 | 요점 상자 | 아직 없음 — 본문 문단과 `result`(세린의 정찰 결과) 이미지로 대체 | `sections[].callout`(`kind`: `key` 금색 · `caution` 주의 · `unconfirmed` 점선, 항목 1~4개) |
-| 본문 공식 이미지 | `spec.json`의 `photo`·`focused_capture`, 원본은 `assets/official/`, 주소는 `SOURCES.json`, 글마다 `assets/SOURCES.md` | `sections[].image`(`id` → `design/body-images/<slug>/<id>.jpg`, 장부 `design/body-images/official-sources.json`, 빌드가 WebP 800·1600px, 캡션 아래 크레딧). `validate.mjs`가 해시·alt·캡션 숫자·3개 언어 id 집합 대조 |
+| 본문 공식 이미지 | `spec.json`의 `photo`·`focused_capture`(`src`로 원본 경로 지정), 공식 원본 표준 폴더는 `assets/official/`, 주소는 `SOURCES.json`, 글마다 `assets/SOURCES.md` | `sections[].image`(`id` → `design/body-images/<slug>/<id>.jpg`, 장부 `design/body-images/official-sources.json`, 빌드가 WebP 800·1600px, 캡션 아래 크레딧). `validate.mjs`가 해시·alt·캡션 숫자·3개 언어 id 집합 대조 |
 | 모바일 검사 | `check_mobile.py`, 공개 화면 360/390/430px 캡처 | `validate.mjs`·`test-design.mjs`, 360/390/430px 캡처 |
 
 ### 아직 맞지 않는 부분 (2026-09-24)
