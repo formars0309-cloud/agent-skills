@@ -93,6 +93,7 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 - 이용자 인용은 원문과 대조한 것만 쓴다(장부만 믿지 않는다).
 - 미확정 일정이나 수치를 단정하지 않는다. 기준일과 게임 버전(빌드)을 적는다.
 - 지역별 시간·가격·상품 조건은 지역을 명시한다. 한 지역의 조건을 다른 지역에 복사하지 않는다.
+- **개정한 글은 제목을 바꾸지 않는다.** 날짜나 "개정"을 제목에 붙이지 않고, 글 맨 위 한 줄로 `최종 수정 <날짜> · <바뀐 내용>`을 알린다(2026-09-25 사용자 결정). 바뀐 내용은 독자가 알아야 할 사실 변경만 짧게 쓴다(90자 이내, 작업 과정·다른 언어판 수정·SEO 작업은 쓰지 않는다). 표현만 바꾼 개정은 알리지 않는다. 처음부터 시점이 핵심인 글(예: "베타 9월 24일 패치")은 새로 쓸 때 제목에 날짜를 넣는 것이 맞다.
 
 ## 6. 시각 요소(표·그래프·단계·요점·본문 이미지)
 
@@ -129,6 +130,7 @@ description: WoW Forever(와우 포에버) 글의 채널 공통 글쓰기 규칙
 | 표·그래프 | `build_assets.py`의 `rows` 표형 이미지(1200×675) + 본문에 같은 수치. 승인된 커뮤니티 표 글만 1200×1600 세로 표 예외 | `sections[].table`(모바일 600px 이하에서 카드)·`sections[].figure`(SVG) |
 | 막대 그래프 | 전용 형식 없음 — `build_assets.py`의 `rows`(라벨·값 표형 행) 이미지로 대체하고 본문에 같은 수치 | `sections[].figure`에 `type: "bars"`(가로 막대 SVG, 선택 `marker`, `stack: true`면 누적 막대). `validate.mjs`가 값과 본문 숫자 대조 |
 | 단계 흐름 | 본문에 `① ②` 문단 + 필요하면 `build_assets.py`의 `cards`(가로 카드 2~4개) 이미지 | `sections[].steps`(번호 원 + 라벨 + 설명 세로 카드, 넓은 화면은 가로 흐름, 3~6단계) |
+| 개정 안내 | 썸네일 바로 아래 `> 최종 수정 2026년 9월 25일 · <바뀐 내용>` 한 줄(연회색 바탕 16). `check_post.py`가 위치·형식 검사, 자동 운영 재검사가 날짜를 발행일로 맞춘다 | 변경 이력 항목의 `notice`(en/de/ko 짧은 요약)가 글 머리 정보 아래 "최종 수정" 상자로 나온다. 2026-09-25 이후 사실 개정은 `notice` 필수(`validate.mjs`), 표현 개정은 `"kind": "presentation"` |
 | 요점 상자 | 아직 없음 — 본문 문단과 `result`(세린의 정찰 결과) 이미지로 대체 | `sections[].callout`(`kind`: `key` 금색 · `caution` 주의 · `unconfirmed` 점선, 항목 1~4개) |
 | 본문 공식 이미지 | `spec.json`의 `photo`·`focused_capture`(`src`로 원본 경로 지정), 공식 원본 표준 폴더는 `assets/official/`, 주소는 `SOURCES.json`, 글마다 `assets/SOURCES.md` | `sections[].image`(`id` → `design/body-images/<slug>/<id>.jpg`, 장부 `design/body-images/official-sources.json`, 빌드가 WebP 800·1600px, 캡션 아래 크레딧). `validate.mjs`가 해시·alt·캡션 숫자·3개 언어 id 집합 대조 |
 | 모바일 검사 | `check_mobile.py`, 공개 화면 360/390/430px 캡처 | `validate.mjs`·`test-design.mjs`, 360/390/430px 캡처 |
