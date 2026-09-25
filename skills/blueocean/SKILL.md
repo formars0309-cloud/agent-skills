@@ -27,7 +27,7 @@ node ~/.claude/skills/blueocean/scripts/blueocean.mjs --seeds 명조 명조공�
 | `--min <n>` | 확장 결과 중 이 검색량 이상만 (기본 500) |
 | `--top <n>` | 판정할 개수 (기본 80). 키워드당 검색 API 2회 |
 | `--exclude <re>` | 제외 정규식. 아래 '오염 키워드' 참고 |
-| `--out <path>` | JSON 저장 경로 (기본 `blueocean.json`) |
+| `--out <path>` | JSON 저장 경로 (기본 `research/blueocean.json`, 폴더가 없으면 만든다) |
 | `--json` | 표 대신 JSON 을 표준출력으로 |
 | `--no-trend` | 추세 생략. 빠르게 볼 때 |
 

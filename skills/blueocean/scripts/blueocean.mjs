@@ -40,7 +40,7 @@
  *   --min <n>        확장 결과 중 이 검색량 이상만 (기본 500)
  *   --top <n>        판정할 키워드 개수 (기본 80). 키워드당 검색 API 2회를 쓴다
  *   --exclude <re>   제외할 키워드 정규식. 아래 '오염 키워드' 참고
- *   --out <path>     JSON 저장 경로 (기본 blueocean.json)
+ *   --out <path>     JSON 저장 경로 (기본 research/blueocean.json, 폴더가 없으면 만든다)
  *   --json           표 대신 JSON 을 표준출력으로
  *   --no-trend       추세 조회 생략 (빠르게 볼 때)
  *
@@ -56,10 +56,10 @@
  * 키워드 사이의 상대 비교로만 읽는다. 광고 비율은 휴리스틱이고 정확한 분류가 아니다.
  */
 import { createHmac } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const AD_BASE = 'https://api.searchad.naver.com';
@@ -445,7 +445,7 @@ const num = (v) => (v === null || v === undefined ? '-' : Number(v).toLocaleStri
 /* -------------------------------------------------------------- main */
 
 function parseArgs(argv) {
-  const out = { seeds: [], exact: [], min: 500, top: 80, exclude: null, out: 'blueocean.json', json: false, trend: true, hot: 0, revenue: 0 };
+  const out = { seeds: [], exact: [], min: 500, top: 80, exclude: null, out: 'research/blueocean.json', json: false, trend: true, hot: 0, revenue: 0 };
   let mode = null;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -589,6 +589,7 @@ async function main() {
   if (unmeasured.length) warn(`측정 불가 ${unmeasured.length}개 — JSON의 unmeasured에 보존`);
   const payload = { generatedAt: new Date().toISOString(), seeds: opt.seeds, exact: opt.exact,
     measuredCount: ranked.length, unmeasured, warnings, rows: ranked };
+  await mkdir(dirname(opt.out), { recursive: true });
   await writeFile(opt.out, JSON.stringify(payload, null, 1), 'utf8');
 
   if (opt.json) {

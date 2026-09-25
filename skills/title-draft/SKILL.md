@@ -21,9 +21,9 @@ title-check   후보를 잰다          표현수요·유사도·상투어·SERP
 ## 도구
 
 ```bash
-node ~/.claude/skills/title-draft/scripts/brief.mjs --in blueocean.json --keyword 본인부담상한제
-node ~/.claude/skills/title-draft/scripts/brief.mjs --in blueocean.json --top 5
-node ~/.claude/skills/title-draft/scripts/brief.mjs --in blueocean.json \
+node ~/.claude/skills/title-draft/scripts/brief.mjs --in research/blueocean.json --keyword 본인부담상한제
+node ~/.claude/skills/title-draft/scripts/brief.mjs --in research/blueocean.json --top 5
+node ~/.claude/skills/title-draft/scripts/brief.mjs --in research/blueocean.json \
   --keyword 본인부담상한제 \
   --myth  "상한제는 신청만 하면 초과분을 다 돌려받는다" \
   --basis "비급여·선별급여는 산정 대상에서 제외된다 — 보건복지부 고시"
@@ -31,7 +31,7 @@ node ~/.claude/skills/title-draft/scripts/brief.mjs --in blueocean.json \
 
 | 옵션 | 뜻 |
 |---|---|
-| `--in <path>` | blueocean 결과 JSON (기본 `blueocean.json`) |
+| `--in <path>` | blueocean 결과 JSON (기본 `research/blueocean.json`) |
 | `--keyword <k>` | 대상 키워드 |
 | `--top <n>` | 상위 n개를 한 번에. `--myth` 는 적용되지 않는다 |
 | `--myth <문장>` | 반박할 통념 |

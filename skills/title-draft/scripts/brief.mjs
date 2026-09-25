@@ -5,7 +5,7 @@
  * 이 스크립트는 제목을 만들지 않는다. 만드는 건 에이전트가 한다.
  * 여기서 하는 일은 셋뿐이다.
  *
- *   1) blueocean.json 에서 한 키워드의 실측값을 꺼낸다
+ *   1) research/blueocean.json 에서 한 키워드의 실측값을 꺼낸다
  *   2) 그 값으로 "어떤 유형을 낼 수 있는가"를 판정한다
  *   3) 금칙어와 제약을 붙여 생성 브리프로 낸다
  *
@@ -26,10 +26,10 @@
  * 순위로 읽는다. 그래서 유형은 이름으로만 부르고 순서를 두지 않는다.
  *
  * 사용법:
- *   node brief.mjs --in blueocean.json --keyword 본인부담상한제
- *   node brief.mjs --in blueocean.json --keyword 욕창 --myth "욕창은 잘 씻기면 안 생긴다"
- *   node brief.mjs --in blueocean.json --top 5          # 상위 5개 키워드를 한 번에
- *   node brief.mjs --in blueocean.json --keyword 욕창 --json
+ *   node brief.mjs --in research/blueocean.json --keyword 본인부담상한제
+ *   node brief.mjs --in research/blueocean.json --keyword 욕창 --myth "욕창은 잘 씻기면 안 생긴다"
+ *   node brief.mjs --in research/blueocean.json --top 5          # 상위 5개 키워드를 한 번에
+ *   node brief.mjs --in research/blueocean.json --keyword 욕창 --json
  */
 
 import { readFile } from 'node:fs/promises';
@@ -56,7 +56,7 @@ function extractIds(basis) {
 }
 
 function parseArgs(argv) {
-  const out = { in: 'blueocean.json', keyword: null, myth: null, basis: null, top: 0, json: false };
+  const out = { in: 'research/blueocean.json', keyword: null, myth: null, basis: null, top: 0, json: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--in') out.in = argv[++i];
@@ -74,7 +74,7 @@ function usage() {
   console.log(`
 제목 생성 브리프 — blueocean 결과를 생성 조건으로 바꾼다.
 
-  --in <path>       blueocean 결과 JSON (기본 blueocean.json)
+  --in <path>       blueocean 결과 JSON (기본 research/blueocean.json)
   --keyword <k>     대상 키워드
   --top <n>         상위 n개 키워드를 한 번에 (--keyword 대신)
   --myth <문장>     반박할 통념
