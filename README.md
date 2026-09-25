@@ -20,6 +20,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | [`imagegen-cli`](skills/imagegen-cli) | Claude Code처럼 이미지 생성 도구가 없는 세션에서 구독 로그인된 CLI(Codex `image_gen`, Grok `image_gen`/`image_edit`)를 비대화형으로 불러 그림을 생성·편집한다. API 키 없음. Claude 경로에만 연결한다. |
 | [`naver-mate`](skills/naver-mate) | 네이버 메이트 공식 기준과 GEO를 바탕으로 채널 전략·인용 정확성 검수·30일 실험·월별 성과 평가를 만든다. |
 | [`naver-blog-writing`](skills/naver-blog-writing) | 프로젝트별 독자·브랜드·권한을 적용해 네이버 글과 이미지를 편집하고 저장 결과를 검수한다. |
+| [`uu`](skills/uu) | Unknown unknowns 점검: 가정 적기·영역 훑기·사전 부검·교차 모델·실측으로 사각지대를 드러내고, 항목마다 확인·가드레일·감지·수용으로 처리한다. |
 | 현자 | Moved to its own repo, [formars0309-cloud/hyunja](https://github.com/formars0309-cloud/hyunja), on 2026-09-07 so it can be shared on its own. |
 
 ## Install on another machine
