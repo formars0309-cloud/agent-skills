@@ -33,7 +33,7 @@ description: 웹툰 회차 제작 파이프라인 도구. 기획·콘티 관리 
 2. 새 회차: `python3 tools/production.py init production/N화-제목-v01.json --episode N --panels K` → brief·panels 작성(컷마다 `cast`·`prompt`·`dialogue`·`emotion`·`shot`). 표정은 `$webtoon-expression`으로 설계한다.
 3. 시안: `python3 tools/panel.py batch MANIFEST --dir 원고/N화-v01 --stage draft` → 컷별 `verdict --result 통과|수정 --note`.
 4. 정본: `batch --stage final` → 생성기록의 `ocr_warning` 확인 → `adopt` → `screen`으로 690·390 확인 → `production.py review`.
-5. 납품: 여백 규칙으로 업로드 순서와 ZIP → `production.py check --stage delivery`. 공개 발행은 사용자 명시 요청 뒤 별도로.
+5. 납품: `references/panel-spacing.md`의 여백 규칙(690px 기준 140/240/320px)으로 업로드 순서와 ZIP → `production.py check --stage delivery`. 공개 발행은 사용자 명시 요청 뒤 별도로.
 
 CLI 생성 경로는 사용 가능한 `$imagegen-cli`와 기존 인증을 사용한다. 내장 이미지 도구 경로는 작품 지시를 따른다. 새 과금·권한을 임의로 만들지 않는다. 생성물은 항상 새 버전 이름이며 기존 파일을 덮어쓰지 않는다. OCR·화면 검사는 사람의 시각 검수를 대신하지 않는다.
 
