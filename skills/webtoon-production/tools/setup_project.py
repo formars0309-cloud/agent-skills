@@ -4,7 +4,8 @@
 
 - production/project.json, production/프롬프트-템플릿.json: 없으면 템플릿에서 만든다. 있으면 건드리지 않는다.
 - tools, tests, production/README.md: 스킬의 원본을 가리키는 심링크. 이미 실제 폴더/파일이면 --replace 없이는 바꾸지 않는다.
-- AGENTS.md: 도구 안내 절이 없으면 끝에 덧붙인다(기존 내용은 유지).
+- AGENTS.md: 도구 안내가 없으면 끝에 덧붙인다(기존 내용은 유지). 제목이 달라도 스킬 경로가
+  이미 적혀 있으면 안내가 있는 것으로 보고 덧붙이지 않는다.
 """
 import argparse
 import json
@@ -15,6 +16,8 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
 SECTION_MARK = '## 회차 제작 도구 — webtoon-production'
+# 문구를 고쳐 쓴 작품 지침에도 중복 추가하지 않도록 스킬 경로로도 판정한다.
+SKILL_REF = 'skills/webtoon-production'
 SECTION = f'''
 {SECTION_MARK}
 
@@ -72,7 +75,9 @@ def main():
     agents = root / 'AGENTS.md'
     if not args.no_agents:
         text = agents.read_text(encoding='utf-8') if agents.exists() else ''
-        if SECTION_MARK not in text:
+        if SECTION_MARK in text or SKILL_REF in text:
+            made.append(f'유지: {agents} 이미 도구 안내가 있음')
+        else:
             with agents.open('a', encoding='utf-8') as stream:
                 stream.write(('' if text.endswith('\n') or not text else '\n') + SECTION)
             made.append(f'추가: {agents} 도구 안내 절')
