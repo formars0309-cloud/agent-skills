@@ -21,6 +21,7 @@ anywhere. Works with Claude Code, and with any other agent that reads the
 | [`naver-mate`](skills/naver-mate) | 네이버 메이트 공식 기준과 GEO를 바탕으로 채널 전략·인용 정확성 검수·30일 실험·월별 성과 평가를 만든다. |
 | [`naver-blog-writing`](skills/naver-blog-writing) | 프로젝트별 독자·브랜드·권한을 적용해 네이버 글과 이미지를 편집하고 저장 결과를 검수한다. |
 | [`uu`](skills/uu) | Unknown unknowns 두 모드: (A) 위험 점검 — 사각지대를 드러내 확인·가드레일·감지·수용으로 처리, (B) 지식 추천 — 기획 단계에서 모르는 개념·방법을 적용법과 첫 실험이 붙은 카드로 추천. |
+| [`워크트리-운영`](skills/워크트리-운영) | Orca 조율자 절차: 워커에게 넘기는 명세, 워크트리 이름·삭제 함정, 1시간 휴지 판정 후 커밋 전 검토, 갈라진 브랜치 푸시 규칙. |
 | 현자 | Moved to its own repo, [formars0309-cloud/hyunja](https://github.com/formars0309-cloud/hyunja), on 2026-09-07 so it can be shared on its own. |
 
 ## Install on another machine
